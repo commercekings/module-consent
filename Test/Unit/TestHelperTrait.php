@@ -17,13 +17,13 @@ trait TestHelperTrait
 
     private function resource(): ResourceConnection
     {
-        $select = $this->createMock(Select::class);
+        $select = $this->createStub(Select::class);
         $select->method('from')->willReturnSelf();
         $select->method('where')->willReturnCallback(function ($cond, $value = null) use ($select) {
             $this->selectWhere[] = [$cond, $value];
             return $select;
         });
-        $db = $this->createMock(AdapterInterface::class);
+        $db = $this->createStub(AdapterInterface::class);
         $db->method('select')->willReturn($select);
         $db->method('insertOnDuplicate')->willReturnCallback(function ($table, array $data) {
             $this->inserts[] = ['table' => $table, 'data' => $data];
@@ -34,21 +34,15 @@ trait TestHelperTrait
             return 2;
         });
         $db->method('fetchOne')->willReturnCallback(fn () => $this->fetchOneResult);
-        $resource = $this->createMock(ResourceConnection::class);
+        $resource = $this->createStub(ResourceConnection::class);
         $resource->method('getConnection')->willReturn($db);
         $resource->method('getTableName')->willReturnArgument(0);
         return $resource;
     }
 
-    private function mockWith(string $class, array $returns): \PHPUnit\Framework\MockObject\MockObject
+    private function mockWith(string $class, array $returns): object
     {
-        $real = array_values(array_filter(array_keys($returns), fn ($m) => method_exists($class, $m)));
-        $magic = array_values(array_diff(array_keys($returns), $real));
-        $builder = $this->getMockBuilder($class)->disableOriginalConstructor()->onlyMethods($real);
-        if ($magic) {
-            $builder->addMethods($magic);
-        }
-        $mock = $builder->getMock();
+        $mock = $this->createStub($class);
         foreach ($returns as $method => $value) {
             if ($value === '__self__') {
                 $mock->method($method)->willReturnSelf();

@@ -31,11 +31,11 @@ class BrowserIdentityTest extends TestCase
             'setHttpOnly' => function ($v) use (&$metadata) { $this->meta['httpOnly'] = $v; return $metadata; },
             'setSameSite' => function ($v) use (&$metadata) { $this->meta['sameSite'] = $v; return $metadata; },
         ]);
-        $factory = $this->createMock(CookieMetadataFactory::class);
+        $factory = $this->createStub(CookieMetadataFactory::class);
         $factory->method('createPublicCookieMetadata')->willReturn($metadata);
-        $config = $this->createMock(SourceConfigInterface::class);
+        $config = $this->createStub(SourceConfigInterface::class);
         $config->method('getCookieLifetimeDays')->willReturn($days);
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('isSecure')->willReturn($secure);
         return new BrowserIdentity($manager, $factory, $config, $request);
     }

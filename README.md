@@ -1,5 +1,10 @@
 # CommerceKings_Consent
 
+Install in a Magento project with `composer require commercekings/module-consent:^0.1` after the first
+release is published. Enable the Magento module(s) listed below and run `bin/magento setup:upgrade`.
+For development/tests use source checkouts (`--prefer-source`); release archives omit `Test/`.
+
+
 Consent records for Magento 2: "may we do **purpose X** for this visitor?", answered from a recorded, server-side consent that can be checked later, withdrawn reliably and shown as evidence. No dependency on any banner or feature module: **sources** (cookie banners, …) report the visitor's choice, **features** (e.g. the abandoned cart reminder) ask and store the consent id with their data.
 
 ```

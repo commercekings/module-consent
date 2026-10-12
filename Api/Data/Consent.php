@@ -7,7 +7,7 @@ namespace CommerceKings\Consent\Api\Data;
  * One recorded consent action. Times are UTC Y-m-d H:i:s. reference + sourceTime = the source's own
  * identity of the visitor's choice (e.g. a banner's consent id and when it was saved).
  */
-final class Consent
+class Consent
 {
     public function __construct(
         public readonly string $consentId,

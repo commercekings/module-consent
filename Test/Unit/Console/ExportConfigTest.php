@@ -34,7 +34,7 @@ class ExportConfigTest extends TestCase
             $stores = $this->createMock(StoreManagerInterface::class);
             $stores->method('getStore')->with('shop')->willReturn($store);
             $state = $this->createMock(State::class);
-            $state->expects($this->once())->method('emulateAreaCode')->with(Area::AREA_FRONTEND, $this->isType('callable'))
+            $state->expects($this->once())->method('emulateAreaCode')->with(Area::AREA_FRONTEND, $this->callback('is_callable'))
                 ->willReturnCallback(fn ($area, $callback) => $callback());
             $tester = new CommandTester(new ExportConfig($evidence, $emulation, $stores, $state));
             $this->assertSame(0, $tester->execute(['--store' => 'shop', '--policy-file' => $file]));
@@ -50,8 +50,8 @@ class ExportConfigTest extends TestCase
     {
         $emulation = $this->createMock(Emulation::class);
         $emulation->expects($this->never())->method('startEnvironmentEmulation');
-        $tester = new CommandTester(new ExportConfig($this->createMock(Evidence::class), $emulation,
-            $this->createMock(StoreManagerInterface::class), $this->createMock(State::class)));
+        $tester = new CommandTester(new ExportConfig($this->createStub(Evidence::class), $emulation,
+            $this->createStub(StoreManagerInterface::class), $this->createStub(State::class)));
         $this->expectException(\InvalidArgumentException::class);
         $tester->execute([]);
     }

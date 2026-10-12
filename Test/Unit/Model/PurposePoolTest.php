@@ -14,7 +14,7 @@ class PurposePoolTest extends TestCase
 
     private function pool(): PurposePool
     {
-        $scope = $this->createMock(ScopeConfigInterface::class);
+        $scope = $this->createStub(ScopeConfigInterface::class);
         $scope->method('isSetFlag')->willReturnCallback(fn ($path) => $this->flags[$path] ?? false);
         return new PurposePool([
             'cart_reminder' => ['label' => 'Reminder'],

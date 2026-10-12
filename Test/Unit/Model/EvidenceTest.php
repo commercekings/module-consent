@@ -21,12 +21,12 @@ class EvidenceTest extends TestCase
         $source->method('getVersion')->willReturn('2.0');
         $source->method('getCategories')->willReturn(['emails' => ['label' => 'Reminder emails', 'description' => 'Use my checkout email for a reminder', 'purposes' => ['cart_reminder']]]);
         $source->expects($this->never())->method('getChoice');
-        $configured = $this->createMock(ConfiguredSource::class);
+        $configured = $this->createStub(ConfiguredSource::class);
         $configured->method('get')->willReturn($source);
         $configured->method('getClientConfig')->willReturn(['revision' => 3]);
-        $banner = $this->createMock(BannerConfigInterface::class);
+        $banner = $this->createStub(BannerConfigInterface::class);
         $banner->method('getConfigJson')->willReturn('{"texts":{"accept":"Accept","reject":"Reject"}}');
-        $config = $this->createMock(Config::class);
+        $config = $this->createStub(Config::class);
         $config->method('getRevision')->willReturn('3');
         $config->method('getPrivacyUrl')->willReturn('https://shop.test/privacy');
         $config->method('getCookieLifetimeDays')->willReturn(30);
@@ -44,9 +44,9 @@ class EvidenceTest extends TestCase
 
     public function testMissingSourceBannerAndPolicyAreExplicitlyAbsent(): void
     {
-        $configured = $this->createMock(ConfiguredSource::class);
+        $configured = $this->createStub(ConfiguredSource::class);
         $configured->method('get')->willReturn(null);
-        $config = $this->createMock(Config::class);
+        $config = $this->createStub(Config::class);
         $snapshot = (new Evidence($configured, new SourcePool(), new PurposePool(), $config))->snapshot();
         $this->assertNull($snapshot['source']);
         $this->assertNull($snapshot['banner_config']);

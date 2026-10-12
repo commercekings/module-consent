@@ -79,30 +79,30 @@ class WordingSnapshotTest extends TestCase
 
     private function snapshot(): WordingSnapshot
     {
-        $evidence = $this->createMock(Evidence::class);
+        $evidence = $this->createStub(Evidence::class);
         $evidence->method('snapshot')->willReturnCallback(fn () => $this->evidence);
-        $consents = $this->createMock(ConsentStore::class);
+        $consents = $this->createStub(ConsentStore::class);
         $consents->method('saveSnapshot')->willReturnCallback(function (...$args): void {
             $this->saved[] = $args;
         });
-        $store = $this->createMock(StoreInterface::class);
+        $store = $this->createStub(StoreInterface::class);
         $store->method('getId')->willReturn(3);
         $store->method('getCode')->willReturn('sr');
         $store->method('getWebsiteId')->willReturn(1);
-        $stores = $this->createMock(StoreManagerInterface::class);
+        $stores = $this->createStub(StoreManagerInterface::class);
         $stores->method('getStore')->willReturn($store);
-        $scope = $this->createMock(ScopeConfigInterface::class);
+        $scope = $this->createStub(ScopeConfigInterface::class);
         $scope->method('getValue')->willReturnCallback(fn (string $path) => match ($path) {
             'general/locale/code' => 'sr_Latn_RS',
             'commercekings_consent/general/privacy_url' => $this->privacyKey,
             default => null,
         });
-        $pages = $this->createMock(GetPageByIdentifierInterface::class);
+        $pages = $this->createStub(GetPageByIdentifierInterface::class);
         $pages->method('execute')->willReturnCallback(function (string $key, int $storeId): PageInterface {
             if ($this->pageContent === null || $storeId !== 3) {
                 throw new NoSuchEntityException();
             }
-            $page = $this->createMock(PageInterface::class);
+            $page = $this->createStub(PageInterface::class);
             $page->method('getTitle')->willReturn('Privacy');
             $page->method('getContent')->willReturn($this->pageContent);
             return $page;

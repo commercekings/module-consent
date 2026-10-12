@@ -12,7 +12,7 @@ namespace CommerceKings\Consent\Api\Data;
  *  - expiresAt: when the source forgets the choice (UTC), '' = the module's default lifetime;
  *  - purposes: the purposes this choice agrees to.
  */
-final class SourceChoice
+class SourceChoice
 {
     /** @param string[] $purposes */
     public function __construct(

@@ -15,12 +15,12 @@ class ConfigTest extends TestCase
 
     private function config(array $values): Config
     {
-        $scope = $this->createMock(ScopeConfigInterface::class);
+        $scope = $this->createStub(ScopeConfigInterface::class);
         $scope->method('getValue')->willReturnCallback(function ($path, $scopeType = 'default', $code = null) use ($values) {
             $this->scopes[] = [$scopeType, $code];
             return $values[$path] ?? null;
         });
-        $url = $this->createMock(UrlInterface::class);
+        $url = $this->createStub(UrlInterface::class);
         $url->method('getDirectUrl')->willReturnCallback(fn ($path) => 'https://shop.test/' . $path);
         return new Config($scope, $url, new PurposePool([
             'cart_reminder' => ['label' => 'Reminder'],

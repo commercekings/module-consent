@@ -17,9 +17,9 @@ class WithdrawTest extends TestCase
         $request = $this->createMock(RequestInterface::class);
         $request->method('getParam')->with('purpose')->willReturn('cart_reminder');
         $data = null;
-        $json = $this->createMock(Json::class);
+        $json = $this->createStub(Json::class);
         $json->method('setData')->willReturnCallback(function ($d) use ($json, &$data) { $data = $d; return $json; });
-        $factory = $this->createMock(JsonFactory::class);
+        $factory = $this->createStub(JsonFactory::class);
         $factory->method('create')->willReturn($json);
         $service = $this->createMock(ConsentService::class);
         $service->expects($this->once())->method('withdrawCurrent')->with('cart_reminder', 'banner')->willReturn(['a', 'b']);

@@ -47,25 +47,25 @@ class ConsentServiceTest extends TestCase
 
     private function service(): ConsentService
     {
-        $source = $this->createMock(SourceInterface::class);
+        $source = $this->createStub(SourceInterface::class);
         $source->method('getCode')->willReturn('banner');
         $source->method('getChoice')->willReturnCallback(fn () => $this->choice);
         $source->method('getCategories')->willReturnCallback(fn () => $this->categories);
-        $configured = $this->createMock(ConfiguredSource::class);
+        $configured = $this->createStub(ConfiguredSource::class);
         $configured->method('get')->willReturnCallback(fn () => $this->sourceInstalled ? $source : null);
-        $browser = $this->createMock(BrowserIdentityInterface::class);
+        $browser = $this->createStub(BrowserIdentityInterface::class);
         $browser->method('hash')->willReturnCallback(fn () => $this->browserHash);
         $browser->method('ensure')->willReturnCallback(fn () => $this->browserHash = $this->browserHash ?: 'new');
-        $config = $this->createMock(Config::class);
+        $config = $this->createStub(Config::class);
         $config->method('getRevision')->willReturnCallback(fn () => $this->bannerRevision);
         $config->method('getCookieLifetimeDays')->willReturnCallback(fn () => $this->lifetimeDays);
         $config->method('isRecorded')->willReturnCallback(fn ($purpose) => !in_array($purpose, $this->unrecorded, true));
-        $website = $this->createMock(WebsiteInterface::class);
+        $website = $this->createStub(WebsiteInterface::class);
         $website->method('getId')->willReturn(1);
-        $stores = $this->createMock(StoreManagerInterface::class);
+        $stores = $this->createStub(StoreManagerInterface::class);
         $stores->method('getWebsite')->willReturn($website);
         $stores->method('getWebsites')->willReturn([$website]);
-        $events = $this->createMock(ManagerInterface::class);
+        $events = $this->createStub(ManagerInterface::class);
         $events->method('dispatch')->willReturnCallback(function ($name, $data) {
             // the withdrawal is already stored when features hear about it
             foreach ($data['consent_ids'] as $id) {
@@ -77,7 +77,7 @@ class ConsentServiceTest extends TestCase
             'cart_reminder' => ['label' => 'Cart reminder', 'terms_revision' => $this->termsRevision],
             'analytics' => ['label' => 'Analytics'],
         ]);
-        $wording = $this->createMock(WordingSnapshot::class);
+        $wording = $this->createStub(WordingSnapshot::class);
         $wording->method('currentHash')->willReturnCallback(fn () => $this->wordingHash);
         return new ConsentService($this->store, $configured, $purposes, $browser, $config, $stores, $events, $wording);
     }
@@ -110,6 +110,7 @@ class ConsentServiceTest extends TestCase
     }
 
     /** @dataProvider noConsent */
+    #[\PHPUnit\Framework\Attributes\DataProvider('noConsent')]
     public function testFailsClosed(callable $setup): void
     {
         $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
@@ -257,10 +258,10 @@ class ConsentServiceTest extends TestCase
 
     public function testGuardConditionChecksTheSameRulesInSql(): void
     {
-        $db = $this->createMock(AdapterInterface::class);
+        $db = $this->createStub(AdapterInterface::class);
         $db->method('quoteInto')->willReturnCallback(fn ($text, $value) => str_replace('?', "'" . $value . "'", $text));
         $db->method('quoteIdentifier')->willReturnCallback(fn ($name) => '`' . $name . '`');
-        $this->store = $this->getMockBuilder(InMemoryConsentStore::class)->onlyMethods(['connection', 'tableName'])->getMock();
+        $this->store = $this->createStub(InMemoryConsentStore::class);
         $this->store->method('connection')->willReturn($db);
         $this->store->method('tableName')->willReturn('ck_consent');
         $sql = $this->service()->validCondition('q.ck_abandoned_consent_id');
@@ -397,10 +398,10 @@ class ConsentServiceTest extends TestCase
 
     public function testAnUnrecordedPurposeIsLeftOutOfTheGuard(): void
     {
-        $db = $this->createMock(AdapterInterface::class);
+        $db = $this->createStub(AdapterInterface::class);
         $db->method('quoteInto')->willReturnCallback(fn ($text, $value) => str_replace('?', "'" . $value . "'", $text));
         $db->method('quoteIdentifier')->willReturnCallback(fn ($name) => '`' . $name . '`');
-        $this->store = $this->getMockBuilder(InMemoryConsentStore::class)->onlyMethods(['connection', 'tableName'])->getMock();
+        $this->store = $this->createStub(InMemoryConsentStore::class);
         $this->store->method('connection')->willReturn($db);
         $this->store->method('tableName')->willReturn('ck_consent');
         $this->unrecorded = ['analytics'];

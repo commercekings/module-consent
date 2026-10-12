@@ -11,7 +11,7 @@ class ConsentConfigTest extends TestCase
 {
     public function testCannotBreakOutOfTheScriptElement(): void
     {
-        $source = $this->createMock(ConfiguredSource::class);
+        $source = $this->createStub(ConfiguredSource::class);
         $source->method('getClientConfig')->willReturn(['adapter' => 'A_B/js/x', 'cookie' => '</script><script>alert(1)</script>']);
         $json = (new ConsentConfig($source))->getJson();
         $this->assertStringNotContainsString('<', $json);

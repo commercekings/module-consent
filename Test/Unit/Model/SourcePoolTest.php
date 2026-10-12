@@ -15,7 +15,7 @@ class SourcePoolTest extends TestCase
 {
     private function source(string $code): SourceInterface
     {
-        $source = $this->createMock(SourceInterface::class);
+        $source = $this->createStub(SourceInterface::class);
         $source->method('getCode')->willReturn($code);
         $source->method('getClientConfig')->willReturn(['cookie' => $code . '-cookie']);
         return $source;
@@ -32,7 +32,7 @@ class SourcePoolTest extends TestCase
 
     private function configured(string $chosen, ?SourcePool $pool = null): ConfiguredSource
     {
-        $config = $this->createMock(Config::class);
+        $config = $this->createStub(Config::class);
         $config->method('getSourceCode')->willReturn($chosen);
         $config->method('getCookieLifetimeDays')->willReturn(90);
         $config->method('getRecordedPurposes')->willReturn(['cart_reminder']);
@@ -55,6 +55,7 @@ class SourcePoolTest extends TestCase
     }
 
     /** @dataProvider noSource */
+    #[\PHPUnit\Framework\Attributes\DataProvider('noSource')]
     public function testUnknownOrNoChoiceFailsClosed(string $chosen): void
     {
         $this->assertNull($this->configured($chosen)->get());

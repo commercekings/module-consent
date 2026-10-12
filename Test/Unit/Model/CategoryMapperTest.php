@@ -18,6 +18,7 @@ class CategoryMapperTest extends TestCase
     }
 
     /** @dataProvider sourceKeyRules */
+    #[\PHPUnit\Framework\Attributes\DataProvider('sourceKeyRules')]
     public function testNormalizationPreservesSourceKeyRulesAndFiltersUndeclaredPurposes(
         string $pattern,
         string $externalKey

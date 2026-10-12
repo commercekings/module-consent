@@ -15,16 +15,16 @@ class CleanupTest extends TestCase
 {
     public function testWithdrawalMarksOutliveTheLongestWebsiteCookieEvenWithShortEvidenceRetention(): void
     {
-        $config = $this->createMock(Config::class);
+        $config = $this->createStub(Config::class);
         $config->method('getKeepDays')->willReturn(30);
         $config->method('getCookieLifetimeDays')->willReturnMap([[1, 90], [2, 365]]);
         $websites = [];
         foreach ([1, 2] as $id) {
-            $website = $this->createMock(WebsiteInterface::class);
+            $website = $this->createStub(WebsiteInterface::class);
             $website->method('getId')->willReturn($id);
             $websites[] = $website;
         }
-        $stores = $this->createMock(StoreManagerInterface::class);
+        $stores = $this->createStub(StoreManagerInterface::class);
         $stores->method('getWebsites')->willReturn($websites);
         $store = $this->createMock(ConsentStore::class);
         $store->expects($this->once())->method('cleanUp')->with(30, 366)->willReturn(3);
