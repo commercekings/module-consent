@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
     <preference for="CommerceKings\Consent\Api\ConsentInterface" type="CommerceKings\Consent\Model\ConsentService"/>
+    <preference for="CommerceKings\Consent\Api\WithdrawalLinkInterface" type="CommerceKings\Consent\Model\WithdrawalLink"/>
     <preference for="CommerceKings\Consent\Api\ConsentGuardInterface" type="CommerceKings\Consent\Model\ConsentService"/>
     <preference for="CommerceKings\Consent\Api\BrowserIdentityInterface" type="CommerceKings\Consent\Model\BrowserIdentity"/>
     <preference for="CommerceKings\Consent\Api\PurposeRegistryInterface" type="CommerceKings\Consent\Model\PurposePool"/>

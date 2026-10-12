@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add a shared signed withdrawal-link API, purpose-specific confirmation page and browser preference sync, independent of feature data; protect later explicit grants from repeated link use.
 - Consent recording, browser identity, evidence snapshots and reliable withdrawal through shared APIs.
 - Prepare Composer metadata, Magento dependency bounds and source/distribution packaging for the first public release.
 - Adapt unit tests to PHPUnit 12 while retaining older data-provider annotations.

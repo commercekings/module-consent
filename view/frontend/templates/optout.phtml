@@ -1,0 +1,12 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+/** @var \Magento\Framework\Escaper $escaper */
+/** @var \CommerceKings\Consent\ViewModel\Withdrawal $viewModel */
+$viewModel = $block->getData('view_model');
+?>
+<div class="ck-optout" style="max-width: 560px; margin: 20px auto 40px; text-align: center;">
+    <p><?= $escaper->escapeHtml(__('Your consent for "%purpose" has been withdrawn.', ['purpose' => $viewModel->getPurposeLabel()])) ?></p>
+    <p><?= $escaper->escapeHtml(__('You can change your preferences in the cookie settings.')) ?></p>
+    <a class="action primary" href="<?= $escaper->escapeUrl($block->getUrl('')) ?>"><?= $escaper->escapeHtml(__('Back to the store')) ?></a>
+</div>
+<script type="text/x-magento-init"><?= /* @noEscape */ $viewModel->getBannerConfigJson() ?></script>
