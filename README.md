@@ -1,9 +1,17 @@
 # CommerceKings_Consent
 
 Install in a Magento project with `composer require commercekings/module-consent:^0.1` after the first
-release is published. Enable the Magento module(s) listed below and run `bin/magento setup:upgrade`.
-For development/tests use source checkouts (`--prefer-source`); release archives omit `Test/`.
+release is published. Then enable its modules:
 
+```sh
+bin/magento module:enable CommerceKings_Consent
+bin/magento setup:upgrade
+bin/magento cache:clean
+```
+
+Use the shop's normal DI compilation and static-content deployment process for production.
+For development/tests use source checkouts (`--prefer-source`); release archives omit `Test/`.
+See [compatibility and verification](COMPATIBILITY.md) and [changes](CHANGELOG.md).
 
 Consent records for Magento 2: "may we do **purpose X** for this visitor?", answered from a recorded, server-side consent that can be checked later, withdrawn reliably and shown as evidence. No dependency on any banner or feature module: **sources** (cookie banners, …) report the visitor's choice, **features** (e.g. the abandoned cart reminder) ask and store the consent id with their data.
 
@@ -65,7 +73,7 @@ Once a withdrawal has been stored, no guarded write or claim can use that consen
 **Stores > Configuration > CommerceKings > Consent** (default / website). Editable: *Source* (None or a registered source – its banner is the one shown; changing it invalidates every consent of the old one), *Privacy / cookie policy page* (every banner links it – `Api\BannerSettingsInterface`), **Source cookie name** (the cookie the banner keeps the visitor's choice in; changing it asks everyone again), **Source revision** (raising it asks every visitor again – the shop's decision, so a package upgrade never changes it) and **Source cookie lifetime (days)** (default 182; it also caps server permission from the saved choice time; a source may expire it sooner), *Keep records for (days)* (default 183). **Record consent for** (website; optional purposes only, none ticked by default – see `record`; turning it on records choices made from then on; the categories table shows each purpose as recorded/required/not recorded). **Read-only** – defined in code, shown for review: *Source version*, *Source categories* (with the purposes each grants and the cookies deleted when off). Flush the full page cache after a change.
 
 ## Adding a source
-The adapter defines its library, cookie readers and registration in **code**. A site module supplies the complete categories/services, descriptions and purpose mappings in `di.xml` (array items merge by name), and selects the source in admin or site `etc/config.xml`. Adapters ship no shop categories or feature defaults. The optional `CommerceKings_ConsentDefaults` package supplies a shared preset when a source has no explicit categories. Without either configuration, adapters render no banner and grant no purpose.
+The adapter defines its library, cookie readers and registration in **code**. Select the source in admin or site `etc/config.xml`. `CommerceKings_ConsentDefaults` supplies a shared preset when a source has no explicit categories; it is optional for this core package and required by `CommerceKings_ConsentVanilla`. A site module can replace the preset with complete categories, descriptions and purpose mappings in `di.xml`. The core alone supplies no categories and grants no purpose without a configured source and mapping.
 
 Removing a purpose mapping also invalidates its stored consents, so queued work cannot use them. The records remain as evidence; removing configuration is not a visitor withdrawal. Restoring the mapping can make otherwise valid records usable again. Raise the source revision if visitors must agree again.
 
@@ -121,4 +129,4 @@ Run the mapping regression against a local Magento database with the module sche
 ```sh
 vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php vendor/commercekings/module-consent/Test/Integration/ConsentMappingTest.php
 ```
-It uses temporary tables and checks stored consent validation and guarded job updates across two websites, including removal and restoration of mappings. It leaves application records unchanged.
+It uses temporary tables and checks stored consent validation and guarded job updates across two websites, including removal and restoration of mappings. It leaves application records unchanged. To run from another directory, set `MAGENTO_ROOT` to the installed Magento root; the test supports Composer installs and source mounts without relying on package directory depth.

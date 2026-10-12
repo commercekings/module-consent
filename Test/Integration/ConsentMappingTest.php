@@ -30,14 +30,21 @@ class ConsentMappingTest extends TestCase
 
     protected function setUp(): void
     {
-        require_once dirname(__DIR__, 6) . '/app/bootstrap.php';
+        $magentoRoot = getenv('MAGENTO_ROOT') ?: (defined('BP') ? BP : getcwd());
+        if (!is_file($magentoRoot . '/app/bootstrap.php')) {
+            throw new \RuntimeException('Run from the Magento root or set MAGENTO_ROOT to an installed Magento project.');
+        }
+        require_once $magentoRoot . '/app/bootstrap.php';
         $om = Bootstrap::create(BP, $_SERVER)->getObjectManager();
         $resource = $om->get(ResourceConnection::class);
         $this->db = $resource->getConnection();
         $this->db->query('CREATE TEMPORARY TABLE ' . self::CONSENTS . ' LIKE '
             . $this->db->quoteIdentifier($resource->getTableName(ConsentStore::TABLE)));
+        // Match the production consent_id collation, regardless of the database server's default.
         $this->db->query('CREATE TEMPORARY TABLE ' . self::JOBS
-            . ' (job_id INT PRIMARY KEY, consent_id VARCHAR(32) NOT NULL, processed TINYINT NOT NULL DEFAULT 0)');
+            . ' AS SELECT consent_id FROM ' . self::CONSENTS . ' WHERE 0');
+        $this->db->query('ALTER TABLE ' . self::JOBS
+            . ' ADD job_id INT PRIMARY KEY, ADD processed TINYINT NOT NULL DEFAULT 0');
         $this->categories = [
             9901 => ['statistics' => ['purposes' => ['analytics']]],
             9902 => ['reminders' => ['purposes' => ['cart_reminder']]],
@@ -118,7 +125,7 @@ class ConsentMappingTest extends TestCase
 
     private function service(): ConsentService
     {
-        $store = $this->createMock(ConsentStore::class);
+        $store = $this->createStub(ConsentStore::class);
         $store->method('connection')->willReturn($this->db);
         $store->method('tableName')->willReturn(self::CONSENTS);
         $store->method('load')->willReturnCallback(function (string $id): ?array {
@@ -127,19 +134,19 @@ class ConsentMappingTest extends TestCase
         $sources = [];
         $websites = [];
         foreach ([9901, 9902] as $websiteId) {
-            $source = $this->createMock(SourceInterface::class);
+            $source = $this->createStub(SourceInterface::class);
             $source->method('getCode')->willReturn('fixture-' . $websiteId);
             $source->method('getCategories')->willReturnCallback(fn () => $this->categories[$websiteId]);
             $sources[$websiteId] = $source;
-            $website = $this->createMock(WebsiteInterface::class);
+            $website = $this->createStub(WebsiteInterface::class);
             $website->method('getId')->willReturn($websiteId);
             $websites[] = $website;
         }
-        $configured = $this->createMock(ConfiguredSource::class);
+        $configured = $this->createStub(ConfiguredSource::class);
         $configured->method('get')->willReturnCallback(fn (?int $id = null) => $sources[$id] ?? null);
-        $stores = $this->createMock(StoreManagerInterface::class);
+        $stores = $this->createStub(StoreManagerInterface::class);
         $stores->method('getWebsites')->willReturn($websites);
-        $config = $this->createMock(Config::class);
+        $config = $this->createStub(Config::class);
         $config->method('getRevision')->willReturn('1');
         $config->method('isRecorded')->willReturn(true);
         $config->method('getCookieLifetimeDays')->willReturnCallback(fn ($websiteId) => $this->lifetimes[$websiteId]);
@@ -147,11 +154,11 @@ class ConsentMappingTest extends TestCase
             $store,
             $configured,
             new PurposePool(['analytics' => ['label' => 'Analytics'], 'cart_reminder' => ['label' => 'Reminder']]),
-            $this->createMock(BrowserIdentityInterface::class),
+            $this->createStub(BrowserIdentityInterface::class),
             $config,
             $stores,
-            $this->createMock(ManagerInterface::class),
-            $this->createMock(WordingSnapshot::class)
+            $this->createStub(ManagerInterface::class),
+            $this->createStub(WordingSnapshot::class)
         );
     }
 }

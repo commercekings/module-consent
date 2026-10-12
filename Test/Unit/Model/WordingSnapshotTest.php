@@ -74,7 +74,7 @@ class WordingSnapshotTest extends TestCase
         [$savedHash, $websiteId, $storeId, $revision, $json] = $this->saved[0];
         $this->assertSame([$hash, 1, 3, '2'], [$savedHash, $websiteId, $storeId, $revision]);
         $this->assertSame($hash, hash('sha256', $json));
-        $this->assertSame('sr_Latn_RS', json_decode($json, true)['store']['locale']);
+        $this->assertSame('en_GB', json_decode($json, true)['store']['locale']);
     }
 
     private function snapshot(): WordingSnapshot
@@ -87,13 +87,13 @@ class WordingSnapshotTest extends TestCase
         });
         $store = $this->createStub(StoreInterface::class);
         $store->method('getId')->willReturn(3);
-        $store->method('getCode')->willReturn('sr');
+        $store->method('getCode')->willReturn('default');
         $store->method('getWebsiteId')->willReturn(1);
         $stores = $this->createStub(StoreManagerInterface::class);
         $stores->method('getStore')->willReturn($store);
         $scope = $this->createStub(ScopeConfigInterface::class);
         $scope->method('getValue')->willReturnCallback(fn (string $path) => match ($path) {
-            'general/locale/code' => 'sr_Latn_RS',
+            'general/locale/code' => 'en_GB',
             'commercekings_consent/general/privacy_url' => $this->privacyKey,
             default => null,
         });
