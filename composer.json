@@ -1,0 +1,31 @@
+{
+    "name": "commercekings/module-consent",
+    "description": "Generic consent layer for Magento 2: purposes, pluggable consent sources (cookie banners, ...), consent time, browser identity and withdrawals.",
+    "type": "magento2-module",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "CommerceKings"
+        }
+    ],
+    "require": {
+        "php": "~8.1.0||~8.2.0||~8.3.0",
+        "magento/framework": "*",
+        "magento/module-store": "*",
+        "magento/module-cms": "*",
+        "magento/module-config": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "CommerceKings\\Consent\\": ""
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}

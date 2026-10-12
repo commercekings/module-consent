@@ -1,0 +1,279 @@
+<?php
+declare(strict_types=1);
+
+namespace CommerceKings\Consent\Model;
+
+use CommerceKings\Consent\Api\BrowserIdentityInterface;
+use CommerceKings\Consent\Api\ConsentGuardInterface;
+use CommerceKings\Consent\Api\ConsentInterface;
+use CommerceKings\Consent\Api\Data\Consent;
+use CommerceKings\Consent\Api\SourceInterface;
+use Magento\Framework\Event\ManagerInterface;
+use Magento\Store\Model\StoreManagerInterface;
+
+/**
+ * ConsentInterface + ConsentGuardInterface. Everything fails closed: no source chosen, an unknown
+ * source, an undeclared or unmapped purpose, a choice without identity or for another revision -> no consent.
+ */
+class ConsentService implements ConsentInterface, ConsentGuardInterface
+{
+    public const EVENT_WITHDRAWN = 'commercekings_consent_withdrawn';
+
+    /** A choice dated further ahead than this (seconds) is a wrong clock or an edited cookie - no consent. */
+    public const FUTURE_TOLERANCE = 86400;
+
+    public function __construct(
+        private readonly ConsentStore $store,
+        private readonly ConfiguredSource $source,
+        private readonly PurposePool $purposes,
+        private readonly BrowserIdentityInterface $browser,
+        private readonly Config $config,
+        private readonly StoreManagerInterface $storeManager,
+        private readonly ManagerInterface $eventManager,
+        private readonly WordingSnapshot $wording
+    ) {
+    }
+
+    public function getCurrent(string $purpose): ?Consent
+    {
+        return $this->current($purpose, false);
+    }
+
+    /**
+     * The visitor just switched the purpose on in the source (js/consent/provider.js -> /ckconsent/grant):
+     * like getCurrent(), but a choice after an earlier withdrawal of the same series counts again.
+     */
+    public function grantCurrent(string $purpose): ?Consent
+    {
+        return $this->current($purpose, true);
+    }
+
+    private function current(string $purpose, bool $explicit): ?Consent
+    {
+        if (!$this->purposes->isDeclared($purpose)) {
+            return null;
+        }
+        $websiteId = $this->websiteId();
+        $source = $this->source->get($websiteId);
+        if (!$source || !in_array($purpose, $this->mappedPurposes($source), true)
+            // an optional purpose the shop does not record: the source's cookie alone decides, nothing is stored
+            || !$this->config->isRecorded($purpose, $websiteId)
+        ) {
+            return null;
+        }
+        $choice = $source->getChoice();
+        if (!$choice || !$choice->accepts($purpose) || $choice->reference === '' || $choice->givenAt === ''
+            || $choice->revision !== $this->config->getRevision($websiteId)
+            || (int)strtotime($choice->givenAt . ' UTC') > time() + self::FUTURE_TOLERANCE
+        ) {
+            return null;
+        }
+        $key = [
+            'purpose' => $purpose,
+            'browser_hash' => $this->browser->ensure(),
+            'website_id' => $websiteId,
+            'source' => $source->getCode(),
+            'reference' => $choice->reference,
+            'source_time' => $choice->givenAt,
+        ];
+        $row = $this->store->find($key);
+        if (!$row) {
+            // first time this choice is seen: record it (refused after a withdrawal - see ConsentStore::record())
+            $this->store->record($key + [
+                'consent_id' => bin2hex(random_bytes(16)),
+                'banner_revision' => $choice->revision,
+                'terms_revision' => $this->purposes->getTermsRevision($purpose),
+                'expires_at' => min(
+                    $choice->expiresAt ?: '9999-12-31 23:59:59',
+                    // counted from the server's time when the browser claims a later one
+                    $this->maximumExpiry(min($choice->givenAt, gmdate('Y-m-d H:i:s')), $websiteId)
+                ),
+                // the wording the visitor saw (evidence, Art. 7(1))
+                'snapshot_hash' => $this->wording->currentHash(),
+            ], $explicit);
+            $row = $this->store->find($key);
+        }
+        return $row && $this->isValidRow($row) ? $this->toConsent($row) : null;
+    }
+
+    public function get(string $consentId): ?Consent
+    {
+        $row = $consentId === '' ? null : $this->store->load($consentId);
+        return $row ? $this->toConsent($row) : null;
+    }
+
+    public function isValid(string $consentId): bool
+    {
+        $row = $consentId === '' ? null : $this->store->load($consentId);
+        return $row !== null && $this->isValidRow($row);
+    }
+
+    public function withdraw(string $consentId, string $via): array
+    {
+        $row = $consentId === '' ? null : $this->store->load($consentId);
+        if (!$row) {
+            return [];
+        }
+        return $this->withdrawAll(
+            (string)$row['purpose'],
+            (string)$row['browser_hash'],
+            (int)$row['website_id'],
+            [[(string)$row['source'], (string)$row['reference'], (string)$row['source_time']]],
+            $via
+        );
+    }
+
+    /**
+     * The current visitor switched the purpose off in the source (js/consent/provider.js -> /ckconsent/withdraw).
+     * Only a current choice that says "no" withdraws: nothing happens while the source still says yes, or
+     * when there is no current choice (no cookie, or one for an older revision - those consents are
+     * already invalid, nobody withdrew them).
+     *
+     * @return string[] consent ids withdrawn now
+     */
+    public function withdrawCurrent(string $purpose, string $via): array
+    {
+        $browserHash = $this->browser->hash();
+        if (!$this->purposes->isDeclared($purpose) || $browserHash === '') {
+            return [];
+        }
+        $websiteId = $this->websiteId();
+        $source = $this->source->get($websiteId);
+        $choice = $source?->getChoice();
+        if (!$source || !$choice || $choice->accepts($purpose) || $choice->reference === '' || $choice->givenAt === '') {
+            return [];
+        }
+        // the "no" itself: anything of this series saved before it (a request still on its way) is refused
+        return $this->withdrawAll($purpose, $browserHash, $websiteId, [[$source->getCode(), $choice->reference, $choice->givenAt]], $via);
+    }
+
+    public function validCondition(string $consentIdColumn): string
+    {
+        $db = $this->store->connection();
+        $sources = [];
+        foreach ($this->storeManager->getWebsites() as $website) {
+            $websiteId = (int)$website->getId();
+            $source = $this->source->get($websiteId);
+            if ($source) {
+                $terms = [];
+                foreach ($this->mappedPurposes($source) as $purpose) {
+                    if (!$this->config->isRecorded($purpose, $websiteId)) {
+                        continue;
+                    }
+                    $terms[] = $db->quoteInto('(ckc.purpose = ?', $purpose)
+                        . $db->quoteInto(' AND ckc.terms_revision = ?)', $this->purposes->getTermsRevision($purpose));
+                }
+                if ($terms) {
+                    // Keep purpose mappings in the same website/source branch, never across websites.
+                    $sources[] = sprintf('(ckc.website_id = %d', $websiteId)
+                        . $db->quoteInto(' AND ckc.source = ?', $source->getCode())
+                        . $db->quoteInto(' AND ckc.banner_revision = ?', $this->config->getRevision($websiteId))
+                        // the lifetime runs from the earlier of the banner's choice time and the server's record time
+                        . sprintf(' AND LEAST(ckc.source_time, ckc.granted_at) > NOW() - INTERVAL %d DAY', $this->config->getCookieLifetimeDays($websiteId))
+                        . ' AND (' . implode(' OR ', $terms) . '))';
+                }
+            }
+        }
+        if (!$sources) {
+            return '0 = 1';
+        }
+        return sprintf(
+            'EXISTS (SELECT 1 FROM %s ckc WHERE ckc.consent_id = %s AND ckc.withdrawn_at IS NULL'
+            . ' AND ckc.expires_at > NOW() AND (%s))',
+            $db->quoteIdentifier($this->store->tableName()),
+            $consentIdColumn,
+            implode(' OR ', $sources)
+        );
+    }
+
+    /**
+     * Marks first (so no request still on its way can record the same choices again), then the consents,
+     * then the event - features clear their data only after the withdrawal is stored.
+     *
+     * @param array<int, array{0: string, 1: string, 2: string}> $marks [source, reference, source time]
+     * @return string[]
+     */
+    private function withdrawAll(string $purpose, string $browserHash, int $websiteId, array $marks, string $via): array
+    {
+        $active = $this->store->findActive($purpose, $browserHash, $websiteId);
+        foreach ($active as $row) {
+            $marks[] = [(string)$row['source'], (string)$row['reference'], (string)$row['source_time']];
+        }
+        foreach ($marks as [$source, $reference, $sourceTime]) {
+            $this->store->mark($purpose, $browserHash, $websiteId, $source, $reference, $sourceTime);
+        }
+        $ids = array_values(array_map(fn (array $row) => (string)$row['consent_id'], $active));
+        if ($ids) {
+            $this->store->markWithdrawn($ids, $via);
+            $this->eventManager->dispatch(self::EVENT_WITHDRAWN, [
+                'purpose' => $purpose,
+                'browser_hash' => $browserHash,
+                'website_id' => $websiteId,
+                'consent_ids' => $ids,
+                'via' => $via,
+            ]);
+        }
+        return $ids;
+    }
+
+    private function isValidRow(array $row): bool
+    {
+        $purpose = (string)$row['purpose'];
+        $websiteId = (int)$row['website_id'];
+        $source = $this->source->get($websiteId);
+        return $row['withdrawn_at'] === null
+            && (string)$row['expires_at'] > gmdate('Y-m-d H:i:s')
+            && $this->maximumExpiry(min((string)$row['source_time'], (string)$row['granted_at']), $websiteId) > gmdate('Y-m-d H:i:s')
+            && $this->purposes->isDeclared($purpose)
+            // an optional purpose the shop stopped recording: its old records no longer count either
+            && $this->config->isRecorded($purpose, $websiteId)
+            && (string)$row['terms_revision'] === $this->purposes->getTermsRevision($purpose)
+            && $source !== null
+            && (string)$row['source'] === $source->getCode()
+            && (string)$row['banner_revision'] === $this->config->getRevision($websiteId)
+            && in_array($purpose, $this->mappedPurposes($source), true);
+    }
+
+    /** @return string[] Declared purposes granted by at least one current source category. */
+    private function mappedPurposes(SourceInterface $source): array
+    {
+        $mapped = [];
+        foreach ($source->getCategories() as $category) {
+            foreach ($category['purposes'] as $purpose) {
+                if ($this->purposes->isDeclared($purpose)) {
+                    $mapped[$purpose] = $purpose;
+                }
+            }
+        }
+        return array_values($mapped);
+    }
+
+    private function toConsent(array $row): Consent
+    {
+        return new Consent(
+            (string)$row['consent_id'],
+            (string)$row['purpose'],
+            (int)$row['website_id'],
+            (string)$row['source'],
+            (string)$row['reference'],
+            (string)$row['source_time'],
+            (string)$row['banner_revision'],
+            (string)$row['terms_revision'],
+            (string)$row['granted_at'],
+            (string)$row['expires_at'],
+            $row['withdrawn_at'] !== null ? (string)$row['withdrawn_at'] : null,
+            $row['withdrawn_via'] !== null ? (string)$row['withdrawn_via'] : null,
+            (string)($row['snapshot_hash'] ?? '')
+        );
+    }
+
+    private function maximumExpiry(string $givenAt, int $websiteId): string
+    {
+        return gmdate('Y-m-d H:i:s', (int)strtotime($givenAt . ' UTC') + $this->config->getCookieLifetimeDays($websiteId) * 86400);
+    }
+
+    private function websiteId(): int
+    {
+        return (int)$this->storeManager->getWebsite()->getId();
+    }
+}

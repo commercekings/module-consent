@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <commercekings_consent>
+            <general>
+                <cookie_name>cc_cookie</cookie_name>
+                <revision>1</revision>
+                <cookie_lifetime_days>182</cookie_lifetime_days>
+                <keep_days>183</keep_days>
+            </general>
+        </commercekings_consent>
+    </default>
+</config>

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="CommerceKings\Consent\Api\ConsentInterface" type="CommerceKings\Consent\Model\ConsentService"/>
+    <preference for="CommerceKings\Consent\Api\ConsentGuardInterface" type="CommerceKings\Consent\Model\ConsentService"/>
+    <preference for="CommerceKings\Consent\Api\BrowserIdentityInterface" type="CommerceKings\Consent\Model\BrowserIdentity"/>
+    <preference for="CommerceKings\Consent\Api\PurposeRegistryInterface" type="CommerceKings\Consent\Model\PurposePool"/>
+    <preference for="CommerceKings\Consent\Api\SourceConfigInterface" type="CommerceKings\Consent\Model\Config"/>
+    <preference for="CommerceKings\Consent\Api\BannerSettingsInterface" type="CommerceKings\Consent\Model\Config"/>
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="consent_config_export" xsi:type="object">CommerceKings\Consent\Console\Command\ExportConfig</item>
+                <item name="consent_evidence_show" xsi:type="object">CommerceKings\Consent\Console\Command\ShowEvidence</item>
+            </argument>
+        </arguments>
+    </type>
+    <!-- purposes may be switched off by their module's settings (active_if) -->
+    <type name="CommerceKings\Consent\Model\PurposePool">
+        <arguments>
+            <argument name="scopeConfig" xsi:type="object">Magento\Framework\App\Config\ScopeConfigInterface</argument>
+        </arguments>
+    </type>
+    <!-- sources register through Model\SourcePool "sources", purposes through Model\PurposePool "purposes" (other modules' di.xml) -->
+</config>

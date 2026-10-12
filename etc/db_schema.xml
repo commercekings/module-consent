@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <!-- recorded consent actions (Model\ConsentStore) - pseudonymous browser hashes and ids, no email addresses -->
+    <table name="ck_consent" resource="default" engine="innodb" comment="CK consent: recorded consent actions">
+        <column xsi:type="varchar" name="consent_id" nullable="false" length="32" comment="Server-issued consent id"/>
+        <column xsi:type="varchar" name="purpose" nullable="false" length="64" comment="Purpose code"/>
+        <column xsi:type="varchar" name="browser_hash" nullable="false" length="64" comment="sha256 of the browser id"/>
+        <column xsi:type="smallint" name="website_id" unsigned="true" nullable="false" comment="Website"/>
+        <column xsi:type="varchar" name="source" nullable="false" length="32" comment="Consent source code"/>
+        <column xsi:type="varchar" name="reference" nullable="false" length="80" comment="Source's id of the visitor's choices"/>
+        <column xsi:type="timestamp" name="source_time" nullable="false" comment="When the choice was saved in the source"/>
+        <column xsi:type="varchar" name="banner_revision" nullable="false" length="32" comment="Source revision the choice was made for"/>
+        <column xsi:type="varchar" name="terms_revision" nullable="false" length="32" comment="Purpose terms revision"/>
+        <column xsi:type="timestamp" name="granted_at" nullable="false" default="CURRENT_TIMESTAMP" comment="Recorded at (server)"/>
+        <column xsi:type="timestamp" name="expires_at" nullable="false" comment="Expires at"/>
+        <column xsi:type="timestamp" name="withdrawn_at" nullable="true" comment="Withdrawn at"/>
+        <column xsi:type="varchar" name="withdrawn_via" nullable="true" length="16" comment="banner / email / admin"/>
+        <column xsi:type="varchar" name="snapshot_hash" nullable="true" length="64" comment="Wording the visitor saw (ck_consent_snapshot)"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="consent_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="CK_CONSENT_CHOICE">
+            <column name="purpose"/>
+            <column name="browser_hash"/>
+            <column name="website_id"/>
+            <column name="source"/>
+            <column name="reference"/>
+            <column name="source_time"/>
+        </constraint>
+        <index referenceId="CK_CONSENT_EXPIRES_AT" indexType="btree">
+            <column name="expires_at"/>
+        </index>
+        <index referenceId="CK_CONSENT_WITHDRAWN_AT" indexType="btree">
+            <column name="withdrawn_at"/>
+        </index>
+        <index referenceId="CK_CONSENT_SNAPSHOT_HASH" indexType="btree">
+            <column name="snapshot_hash"/>
+        </index>
+    </table>
+    <!-- the wording shown when consents were given (Model\WordingSnapshot): one row per distinct wording -->
+    <table name="ck_consent_snapshot" resource="default" engine="innodb" comment="CK consent: wording snapshots">
+        <column xsi:type="varchar" name="snapshot_hash" nullable="false" length="64" comment="sha256 of content"/>
+        <column xsi:type="smallint" name="website_id" unsigned="true" nullable="false" comment="Website"/>
+        <column xsi:type="smallint" name="store_id" unsigned="true" nullable="false" comment="Store view"/>
+        <column xsi:type="varchar" name="banner_revision" nullable="false" length="32" comment="Source revision"/>
+        <column xsi:type="mediumtext" name="content" nullable="false" comment="JSON: texts, categories, purposes, privacy page"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP" comment="First seen"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="snapshot_hash"/>
+        </constraint>
+        <index referenceId="CK_CONSENT_SNAPSHOT_STORE_REVISION" indexType="btree">
+            <column name="store_id"/>
+            <column name="banner_revision"/>
+            <column name="created_at"/>
+        </index>
+    </table>
+    <!-- withdrawal marks: choices of a series at or before source_time are never recorded again -->
+    <table name="ck_consent_withdrawal" resource="default" engine="innodb" comment="CK consent: withdrawal marks">
+        <column xsi:type="varchar" name="purpose" nullable="false" length="64" comment="Purpose code"/>
+        <column xsi:type="varchar" name="browser_hash" nullable="false" length="64" comment="sha256 of the browser id"/>
+        <column xsi:type="smallint" name="website_id" unsigned="true" nullable="false" comment="Website"/>
+        <column xsi:type="varchar" name="source" nullable="false" length="32" comment="Consent source code"/>
+        <column xsi:type="varchar" name="reference" nullable="false" length="80" comment="Source's id of the visitor's choices"/>
+        <column xsi:type="timestamp" name="source_time" nullable="false" comment="Latest withdrawn choice time"/>
+        <column xsi:type="timestamp" name="updated_at" nullable="false" default="CURRENT_TIMESTAMP" on_update="true" comment="Last withdrawal"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="purpose"/>
+            <column name="browser_hash"/>
+            <column name="website_id"/>
+            <column name="source"/>
+            <column name="reference"/>
+        </constraint>
+        <index referenceId="CK_CONSENT_WITHDRAWAL_UPDATED_AT" indexType="btree">
+            <column name="updated_at"/>
+        </index>
+    </table>
+</schema>

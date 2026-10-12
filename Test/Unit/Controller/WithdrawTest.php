@@ -1,0 +1,29 @@
+<?php
+declare(strict_types=1);
+
+namespace CommerceKings\Consent\Test\Unit\Controller;
+
+use CommerceKings\Consent\Controller\Withdraw\Index;
+use CommerceKings\Consent\Model\ConsentService;
+use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Controller\Result\Json;
+use Magento\Framework\Controller\Result\JsonFactory;
+use PHPUnit\Framework\TestCase;
+
+class WithdrawTest extends TestCase
+{
+    public function testWithdrawsThroughTheServiceAsBanner(): void
+    {
+        $request = $this->createMock(RequestInterface::class);
+        $request->method('getParam')->with('purpose')->willReturn('cart_reminder');
+        $data = null;
+        $json = $this->createMock(Json::class);
+        $json->method('setData')->willReturnCallback(function ($d) use ($json, &$data) { $data = $d; return $json; });
+        $factory = $this->createMock(JsonFactory::class);
+        $factory->method('create')->willReturn($json);
+        $service = $this->createMock(ConsentService::class);
+        $service->expects($this->once())->method('withdrawCurrent')->with('cart_reminder', 'banner')->willReturn(['a', 'b']);
+        (new Index($request, $factory, $service))->execute();
+        $this->assertSame(['withdrawn' => 2], $data);
+    }
+}

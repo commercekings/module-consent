@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="commercekings" translate="label" sortOrder="900" class="commercekings-tab">
+            <label>CommerceKings</label>
+        </tab>
+        <section id="commercekings_consent" translate="label" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Consent</label>
+            <tab>commercekings</tab>
+            <resource>CommerceKings_Consent::config</resource>
+            <group id="general" translate="label comment" sortOrder="10" showInDefault="1" showInWebsite="1">
+                <label>Consent</label>
+                <comment><![CDATA[Where consent comes from, per website. The source only reports the visitor's choice; this module records each consent, recognises the browser and handles withdrawals. Changing the source makes every consent given through the old one invalid. What the source and the purposes are is defined in code (di.xml) and only shown here; the revision and cookie lifetime are yours to set below. After changing these, flush the full page cache.]]></comment>
+                <field id="source" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1">
+                    <label>Source</label>
+                    <comment>The cookie banner the visitors answer - its banner is the one shown. None = no banner, no purpose ever has consent.</comment>
+                    <source_model>CommerceKings\Consent\Model\Config\Source\Sources</source_model>
+                </field>
+                <field id="privacy_url" translate="label comment" type="text" sortOrder="11" showInDefault="1" showInWebsite="1">
+                    <label>Privacy / cookie policy page</label>
+                    <comment>Linked from the banner of the chosen source. URL key or full URL, e.g. privacy-policy-cookie-restriction-mode. Supply a published notice explaining the controller, data uses, recipients, retention and visitor rights. Empty = no link; the package does not supply your shop's privacy notice.</comment>
+                </field>
+                <field id="source_version" translate="label comment" sortOrder="12" showInDefault="1" showInWebsite="1">
+                    <label>Source version</label>
+                    <comment>The version of the cookie banner library behind the source. Defined in code (the source module).</comment>
+                    <frontend_model>CommerceKings\Consent\Block\Adminhtml\SourceInfo</frontend_model>
+                </field>
+                <field id="cookie_name" translate="label comment" type="text" sortOrder="13" showInDefault="1" showInWebsite="1">
+                    <label>Source cookie name</label>
+                    <comment>The cookie in which the banner stores the visitor's choice (which categories are on) - only the banner's answer, no shop data. Changing it asks every visitor again. A package upgrade never changes it.</comment>
+                    <validate>required-entry validate-code</validate>
+                </field>
+                <field id="source_categories" translate="label comment" sortOrder="16" showInDefault="1" showInWebsite="1">
+                    <label>Source categories</label>
+                    <comment>A category is a switch the visitor sees in the banner (e.g. Personalization); switching it on gives consent for the purposes listed next to it. In display order, defined in code (di.xml); labels translated with Magento i18n.</comment>
+                    <frontend_model>CommerceKings\Consent\Block\Adminhtml\SourceInfo</frontend_model>
+                </field>
+                <field id="record_purposes" translate="label comment" type="multiselect" sortOrder="17" showInDefault="1" showInWebsite="1" canRestore="1">
+                    <label>Record consent for</label>
+                    <comment><![CDATA[<strong>Ticked:</strong> each choice is saved as evidence - who, when, which wording (consent:evidence:show). <strong>Not ticked:</strong> the banner's cookie alone decides and nothing is stored; withdrawing still stops the feature (e.g. Google Analytics) and deletes its cookies. Purposes whose feature needs the record to work (e.g. reminder emails) are always recorded and not listed here - see "required" under Source categories. Turning it on records choices made from then on; raise the source revision to ask everyone again.]]></comment>
+                    <source_model>CommerceKings\Consent\Model\Config\Source\OptionalPurposes</source_model>
+                    <can_be_empty>1</can_be_empty>
+                </field>
+                <field id="revision" translate="label comment" type="text" sortOrder="880" showInDefault="1" showInWebsite="1">
+                    <label>Source revision</label>
+                    <comment><![CDATA[The version of the banner's questions the visitors answered. <strong>Raising it asks every visitor again; every consent given before stops counting - for every purpose, also reminders already waiting.</strong> Raise it when the banner's categories, texts or the privacy policy change in a way visitors must agree to again. A package upgrade never changes it.]]></comment>
+                    <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                </field>
+                <field id="wording_check" translate="label comment" sortOrder="885" showInDefault="1" showInWebsite="1">
+                    <label>Wording since revision</label>
+                    <comment>Every consent stores the wording the visitor saw (banner texts, categories, purposes, privacy page); consent:evidence:show &lt;consent id&gt; prints it. Editing a text does not ask anyone again - raising the source revision does.</comment>
+                    <frontend_model>CommerceKings\Consent\Block\Adminhtml\WordingCheck</frontend_model>
+                </field>
+                <field id="cookie_lifetime_days" translate="label comment" type="text" sortOrder="890" showInDefault="1" showInWebsite="1">
+                    <label>Source cookie lifetime (days)</label>
+                    <comment>Maximum consent lifetime from the saved choice time; a source may expire it sooner. The same setting controls consent helper cookies. Reducing it also shortens existing server permissions. Raise the source revision when visitors should be prompted again.</comment>
+                    <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                </field>
+                <field id="keep_days" translate="label comment" type="text" sortOrder="900" showInDefault="1">
+                    <label>Keep records for (days)</label>
+                    <comment>Consent records are deleted by a daily cron this many days after expiry or withdrawal, not after the original grant. Withdrawal marks are kept for at least the longest website source-cookie lifetime plus one day, so an old accepted cookie cannot regain permission. The wording each consent was given under is kept as long as a consent points to it.</comment>
+                    <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

@@ -1,0 +1,62 @@
+{
+    "ck_consent": {
+        "column": {
+            "consent_id": true,
+            "purpose": true,
+            "browser_hash": true,
+            "website_id": true,
+            "source": true,
+            "reference": true,
+            "source_time": true,
+            "banner_revision": true,
+            "terms_revision": true,
+            "granted_at": true,
+            "expires_at": true,
+            "withdrawn_at": true,
+            "withdrawn_via": true,
+            "snapshot_hash": true
+        },
+        "index": {
+            "CK_CONSENT_EXPIRES_AT": true,
+            "CK_CONSENT_WITHDRAWN_AT": true,
+            "CK_CONSENT_SNAPSHOT_HASH": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "CK_CONSENT_CHOICE": true
+        }
+    },
+    "ck_consent_withdrawal": {
+        "column": {
+            "purpose": true,
+            "browser_hash": true,
+            "website_id": true,
+            "source": true,
+            "reference": true,
+            "source_time": true,
+            "updated_at": true
+        },
+        "index": {
+            "CK_CONSENT_WITHDRAWAL_UPDATED_AT": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    },
+    "ck_consent_snapshot": {
+        "column": {
+            "snapshot_hash": true,
+            "website_id": true,
+            "store_id": true,
+            "banner_revision": true,
+            "content": true,
+            "created_at": true
+        },
+        "index": {
+            "CK_CONSENT_SNAPSHOT_STORE_REVISION": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    }
+}
