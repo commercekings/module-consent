@@ -5,9 +5,11 @@ namespace CommerceKings\Consent\Console\Command;
 
 use CommerceKings\Consent\Model\Evidence;
 use Magento\Framework\App\Area;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\State;
 use Magento\Store\Model\App\Emulation;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Store\Model\ScopeInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -19,7 +21,8 @@ class ExportConfig extends Command
         private readonly Evidence $evidence,
         private readonly Emulation $emulation,
         private readonly StoreManagerInterface $stores,
-        private readonly State $state
+        private readonly State $state,
+        private readonly ScopeConfigInterface $scopeConfig
     ) {
         parent::__construct();
     }
@@ -56,7 +59,7 @@ class ExportConfig extends Command
                     'id' => (int)$store->getId(),
                     'code' => $store->getCode(),
                     'website_id' => (int)$store->getWebsiteId(),
-                    'locale' => $store->getConfig('general/locale/code'),
+                    'locale' => $this->scopeConfig->getValue('general/locale/code', ScopeInterface::SCOPE_STORE, $store->getId()),
                 ];
                 $output->writeln(
                     json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),

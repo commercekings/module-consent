@@ -11,6 +11,7 @@ use Magento\Config\Block\System\Config\Form\Field;
 use Magento\Framework\App\Area;
 use Magento\Framework\Data\Form\Element\AbstractElement;
 use Magento\Store\Model\App\Emulation;
+use Magento\Store\Api\Data\StoreInterface;
 
 /**
  * Per store view: has the wording (banner texts, categories, purposes, privacy page) changed since the
@@ -37,8 +38,9 @@ class WordingCheck extends Field
         $rows = '';
         $i = 0;
         foreach ($this->storesInScope() as $store) {
+            $website = $this->_storeManager->getWebsite((int)$store->getWebsiteId());
             $rows .= '<tr class="data-row' . ($i++ % 2 ? ' _odd-row' : '') . '"><td' . self::CELL . '>'
-                . $this->escapeHtml($store->getWebsite()->getName() . ' / ' . $store->getName())
+                . $this->escapeHtml($website->getName() . ' / ' . $store->getName())
                 . '</td><td' . self::CELL . '>' . $this->status((int)$store->getId(), (int)$store->getWebsiteId()) . '</td></tr>';
         }
         return '<div style="font-size:1.4rem"><div class="admin__data-grid-wrap admin__data-grid-wrap-static"><table class="data-grid">'
@@ -74,7 +76,7 @@ class WordingCheck extends Field
             ));
     }
 
-    /** @return \Magento\Store\Model\Store[] */
+    /** @return StoreInterface[] */
     private function storesInScope(): array
     {
         $websiteId = (int)$this->getRequest()->getParam('website');

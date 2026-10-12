@@ -26,11 +26,11 @@ class SourceInfo extends Field
         Context $context,
         private readonly SourcePool $sources,
         private readonly PurposePool $purposes,
-        private readonly SecureHtmlRenderer $secureRenderer,
+        private readonly SecureHtmlRenderer $htmlRenderer,
         private readonly Config $config,
         array $data = []
     ) {
-        parent::__construct($context, $data);
+        parent::__construct($context, $data, $htmlRenderer);
     }
 
     protected function _getElementHtml(AbstractElement $element)
@@ -132,6 +132,6 @@ class SourceInfo extends Field
             . "function show() { row.querySelectorAll('.ck-source-info').forEach(function (el) {"
             . "el.hidden = el.getAttribute('data-source') !== select.value; }); }"
             . "select.addEventListener('change', show); show(); }());";
-        return $this->secureRenderer->renderTag('script', [], $js, false);
+        return $this->htmlRenderer->renderTag('script', [], $js, false);
     }
 }
