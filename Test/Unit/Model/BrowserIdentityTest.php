@@ -19,7 +19,7 @@ class BrowserIdentityTest extends TestCase
     private array $set = [];
     private array $meta = [];
 
-    private function identity(?string $cookie, bool $secure = true, int $days = 90): BrowserIdentity
+    private function identity(mixed $cookie, bool $secure = true, int $days = 90): BrowserIdentity
     {
         $manager = $this->createMock(CookieManagerInterface::class);
         $manager->method('getCookie')->with('ck_consent_browser')->willReturn($cookie);
@@ -44,6 +44,8 @@ class BrowserIdentityTest extends TestCase
     {
         $this->assertSame('', $this->identity(null)->hash());
         $this->assertSame('', $this->identity('not-hex')->hash());
+        $this->assertSame('', $this->identity(['bad'])->hash());
+        $this->assertNotSame('', $this->identity(['bad'])->ensure());
     }
 
     public function testExistingCookieIsHashedAndKept(): void

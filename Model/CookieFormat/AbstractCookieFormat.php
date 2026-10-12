@@ -50,7 +50,14 @@ abstract class AbstractCookieFormat implements CookieFormatInterface
     public function consentTime(array $cookie): string
     {
         foreach (static::TIME as $path) {
-            $time = strtotime((string)$this->value($cookie, $path));
+            $value = $this->value($cookie, $path);
+            if ($value === null) {
+                continue;
+            }
+            if (!is_string($value)) {
+                return '';
+            }
+            $time = strtotime($value);
             if ($time) {
                 return gmdate('Y-m-d H:i:s', $time);
             }
@@ -60,12 +67,15 @@ abstract class AbstractCookieFormat implements CookieFormatInterface
 
     public function reference(array $cookie): string
     {
-        return substr((string)preg_replace('/[^a-z0-9-]/i', '', (string)$this->value($cookie, static::REFERENCE)), 0, 80);
+        $value = $this->value($cookie, static::REFERENCE);
+        return is_string($value) || is_int($value)
+            ? substr((string)preg_replace('/[^a-z0-9-]/i', '', (string)$value), 0, 80) : '';
     }
 
     public function revision(array $cookie): string
     {
-        return (string)(int)$this->value($cookie, static::REVISION);
+        $value = $this->value($cookie, static::REVISION);
+        return is_string($value) || is_int($value) ? (string)(int)$value : '0';
     }
 
     public function expiresAt(array $cookie): string

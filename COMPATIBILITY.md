@@ -10,7 +10,8 @@ combination has passed runtime testing.
 
 The five-package sandbox also checks consent mapping against temporary database tables,
 the JavaScript lifecycle, and native Vanilla consent choices, add-to-cart and checkout in
-a browser. Its database is MariaDB 11.8. These checks do not certify other themes, third-party
+a browser. Endpoint regressions also cover website isolation, strict form keys, malformed input,
+HEAD safety and link replay. Its database is MariaDB 11.8. These checks do not certify other themes, third-party
 tracking scripts, checkout customizations or Adobe Commerce-specific features.
 
 The GitHub workflow checks package metadata, PHP syntax on 8.1–8.5 and Git archive contents.

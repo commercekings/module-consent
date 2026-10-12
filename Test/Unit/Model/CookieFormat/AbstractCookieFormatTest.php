@@ -45,4 +45,14 @@ class AbstractCookieFormatTest extends TestCase
         $this->assertSame('0', $format->revision([]));
         $this->assertSame('', $format->expiresAt(['meta' => ['until' => 'soon']]));
     }
+
+    public function testNestedArraysAreRejectedWithoutCastingWarningsOrFallbackGrants(): void
+    {
+        $format = $this->format();
+        $cookie = ['meta' => ['id' => ['fake'], 'saved' => ['fake'], 'first' => '2026-10-11T10:00:00Z', 'rev' => [1]]];
+        $this->assertSame('', $format->reference($cookie));
+        $this->assertSame('', $format->consentTime($cookie));
+        $this->assertSame('0', $format->revision($cookie));
+        $this->assertFalse($format->matches($cookie));
+    }
 }

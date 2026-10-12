@@ -6,7 +6,7 @@ namespace CommerceKings\Consent\Test\Unit\Controller;
 use CommerceKings\Consent\Api\Data\Consent;
 use CommerceKings\Consent\Controller\Optout\Index;
 use CommerceKings\Consent\Model\WithdrawalLink;
-use Magento\Framework\App\RequestInterface;
+use Magento\Framework\App\Request\Http;
 use Magento\Framework\Controller\Result\Redirect;
 use Magento\Framework\Controller\Result\RedirectFactory;
 use Magento\Framework\View\Page\Config;
@@ -20,12 +20,15 @@ class OptoutTest extends TestCase
     private array $page = [];
     private ?string $path = null;
 
-    private function controller(?Consent $record): Index
+    private function controller(?Consent $record, string $method = 'GET', mixed $id = null, mixed $token = null): Index
     {
-        $request = $this->createStub(RequestInterface::class);
-        $request->method('getParam')->willReturnCallback(fn ($key) => ['c' => 'cid', 't' => 'signed'][$key]);
+        $request = $this->createStub(Http::class);
+        $request->method('getMethod')->willReturn($method);
+        $request->method('getParam')->willReturnCallback(fn ($key) => ['c' => $id ?? str_repeat('a', 32), 't' => $token ?? str_repeat('b', 64)][$key]);
         $links = $this->createMock(WithdrawalLink::class);
-        $links->expects($this->once())->method('withdraw')->with('cid', 'signed')->willReturn($record);
+        $allowed = $method === 'GET' && $id === null && $token === null;
+        $links->expects($allowed ? $this->once() : $this->never())->method('withdraw')
+            ->with(str_repeat('a', 32), str_repeat('b', 64))->willReturn($record);
         $redirect = $this->createStub(Redirect::class);
         $redirect->method('setPath')->willReturnCallback(function ($path) use ($redirect) {
             $this->path = $path;
@@ -59,5 +62,32 @@ class OptoutTest extends TestCase
         $this->assertInstanceOf(Redirect::class, $this->controller(null)->execute());
         $this->assertSame('', $this->path);
         $this->assertSame([], $this->page);
+    }
+
+    public function testHeadDoesNotWithdrawOrRenderBannerSync(): void
+    {
+        $this->assertInstanceOf(Redirect::class, $this->controller(null, 'HEAD')->execute());
+        $this->assertSame('', $this->path);
+        $this->assertSame([], $this->page);
+    }
+
+    /** @dataProvider malformedLinks */
+    #[\PHPUnit\Framework\Attributes\DataProvider('malformedLinks')]
+    public function testMalformedLinkDoesNotReachWithdrawal(mixed $id, mixed $token): void
+    {
+        $this->controller(null, 'GET', $id, $token)->execute();
+        $this->assertSame('', $this->path);
+        $this->assertSame([], $this->page);
+    }
+
+    public static function malformedLinks(): array
+    {
+        return [
+            'array id' => [['id'], null], 'array token' => [null, ['token']],
+            'integer id' => [42, null], 'empty id' => ['', null],
+            'oversized id' => [str_repeat('a', 33), null],
+            'non-hex id' => [str_repeat('z', 32), null],
+            'short token' => [null, 'forged'], 'oversized token' => [null, str_repeat('b', 65)],
+        ];
     }
 }

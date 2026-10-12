@@ -28,8 +28,8 @@ class BrowserIdentity implements BrowserIdentityInterface
 
     public function hash(): string
     {
-        $id = $this->created ?? (string)$this->cookieManager->getCookie(self::COOKIE);
-        return preg_match('/^[0-9a-f]{32}$/', $id) ? hash('sha256', $id) : '';
+        $id = $this->created ?? $this->cookieManager->getCookie(self::COOKIE);
+        return is_string($id) && preg_match('/^[0-9a-f]{32}$/D', $id) ? hash('sha256', $id) : '';
     }
 
     public function ensure(): string
