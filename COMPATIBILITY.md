@@ -16,7 +16,8 @@ tracking scripts, checkout customizations or Adobe Commerce-specific features.
 
 The GitHub workflow checks package metadata, PHP syntax on 8.1–8.5 and Git archive contents.
 Local syntax checks passed on PHP 8.1.34, 8.2.30, 8.3.30, 8.4.26 and 8.5.11.
-The workflow does not install Magento or run runtime tests, and has not run on GitHub yet.
+The workflow does not install Magento or run runtime tests. Latest results are available in
+[GitHub Actions](https://github.com/commercekings/module-consent/actions).
 
 For runtime tests, install the source checkout in a compatible Magento development project
 and follow the README. Distribution archives omit `Test/`; source checkouts retain it.
