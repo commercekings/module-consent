@@ -35,5 +35,10 @@
             "/.gitignore",
             "/.gitattributes"
         ]
+    },
+    "homepage": "https://github.com/commercekings/module-consent",
+    "support": {
+        "issues": "https://github.com/commercekings/module-consent/issues",
+        "source": "https://github.com/commercekings/module-consent"
     }
 }
