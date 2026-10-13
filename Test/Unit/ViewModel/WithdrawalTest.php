@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CommerceKings\Consent\Test\Unit\ViewModel;
 
 use CommerceKings\Consent\Api\BrowserIdentityInterface;
+use CommerceKings\Consent\Api\ConsentInterface;
 use CommerceKings\Consent\Api\Data\Consent;
 use CommerceKings\Consent\Api\Data\SourceChoice;
 use CommerceKings\Consent\Api\PurposeRegistryInterface;
@@ -18,7 +19,9 @@ use PHPUnit\Framework\TestCase;
 class WithdrawalTest extends TestCase
 {
     private string $hash = 'original';
-    private ?array $current = ['withdrawn_at' => '2026-01-01 00:00:00'];
+    private ?array $current = ['consent_id' => 'cid', 'withdrawn_at' => '2026-01-01 00:00:00'];
+    private ?string $withdrawnAt = '2025-01-01 00:00:00';
+    private bool $currentValid = true;
     private bool $valid = true;
     private string $purpose = 'another_feature';
     private array $lookup = [];
@@ -30,7 +33,7 @@ class WithdrawalTest extends TestCase
         $links = $this->createStub(WithdrawalLink::class);
         $links->method('getConsent')->willReturnCallback(fn () => $this->valid
             ? new Consent('cid', $this->purpose, 1, 'vanilla', 'choice', '2020-01-01 00:00:00',
-                '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00') : null);
+                '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00', $this->withdrawnAt) : null);
         $purposes = $this->createStub(PurposeRegistryInterface::class);
         $purposes->method('getLabel')->willReturnCallback(fn ($purpose) => 'Label: ' . $purpose);
         $store = $this->createStub(ConsentStore::class);
@@ -41,18 +44,23 @@ class WithdrawalTest extends TestCase
         });
         $source = $this->createStub(SourceInterface::class);
         $source->method('getCode')->willReturn('vanilla');
-        $source->method('getChoice')->willReturn(new SourceChoice('current-choice', '2026-01-01 00:00:00', '1', []));
+        $source->method('getChoice')->willReturnCallback(fn () => new SourceChoice(
+            'current-choice', '2026-01-01 00:00:00', '1', [$this->purpose]
+        ));
         $sources = $this->createStub(ConfiguredSource::class);
         $sources->method('get')->willReturn($source);
         $browser = $this->createStub(BrowserIdentityInterface::class);
         $browser->method('hash')->willReturnCallback(fn () => $this->hash);
-        return new Withdrawal($request, $links, $purposes, $store, $sources, $browser);
+        $consents = $this->createStub(ConsentInterface::class);
+        $consents->method('isValid')->willReturnCallback(fn () => $this->currentValid);
+        return new Withdrawal($request, $links, $purposes, $store, $sources, $browser, $consents);
     }
 
     public function testDisplaysLabelAndSyncsOnlyItsRecordedWithdrawnPurpose(): void
     {
         $view = $this->viewModel();
         $this->assertSame('Label: another_feature', $view->getPurposeLabel());
+        $this->assertFalse($view->hasNewerConsent());
         $config = json_decode($view->getBannerConfigJson(), true);
         $this->assertSame(['*' => ['CommerceKings_Consent/js/withdrawal-banner' => ['purpose' => 'another_feature']]], $config);
         $this->assertSame(['purpose' => 'another_feature', 'browser_hash' => 'original', 'website_id' => 1,
@@ -65,6 +73,8 @@ class WithdrawalTest extends TestCase
         $this->hash = 'different';
         $this->assertSame('{}', $view->getBannerConfigJson());
         $this->assertSame([], $this->lookup);
+        $this->current = ['consent_id' => 'new-id', 'withdrawn_at' => null];
+        $this->assertFalse($view->hasNewerConsent());
     }
 
     public function testBrowserWithoutIdentityIsNeverModified(): void
@@ -72,12 +82,14 @@ class WithdrawalTest extends TestCase
         $view = $this->viewModel();
         $this->hash = '';
         $this->assertSame('{}', $view->getBannerConfigJson());
+        $this->current = ['consent_id' => 'new-id', 'withdrawn_at' => null];
+        $this->assertFalse($view->hasNewerConsent());
     }
 
     public function testLaterGrantedOrUnrecordedChoiceIsNeverModified(): void
     {
         $view = $this->viewModel();
-        $this->current = ['withdrawn_at' => null];
+        $this->current = ['consent_id' => 'new-id', 'withdrawn_at' => null];
         $this->assertSame('{}', $view->getBannerConfigJson());
         $this->current = null;
         $this->assertSame('{}', $view->getBannerConfigJson());
@@ -87,8 +99,39 @@ class WithdrawalTest extends TestCase
     {
         $view = $this->viewModel();
         $this->valid = false;
+        $this->assertFalse($view->hasNewerConsent());
         $this->assertSame('', $view->getPurposeLabel());
         $this->assertSame('{}', $view->getBannerConfigJson());
+    }
+
+    public function testNewExplicitConsentIsReportedActiveAndNeverSyncedOff(): void
+    {
+        $this->current = ['consent_id' => 'new-id', 'withdrawn_at' => null];
+        $view = $this->viewModel();
+        $this->assertTrue($view->hasNewerConsent());
+        $this->assertSame('{}', $view->getBannerConfigJson());
+    }
+
+    public function testExpiredOrObsoleteCurrentConsentIsNotReportedActive(): void
+    {
+        $this->current = ['consent_id' => 'new-id', 'withdrawn_at' => null];
+        $this->currentValid = false;
+        $this->assertFalse($this->viewModel()->hasNewerConsent());
+    }
+
+    public function testUnrecordedChoiceOrSameConsentIsNotReportedAsNewer(): void
+    {
+        $this->current = null;
+        $this->assertFalse($this->viewModel()->hasNewerConsent());
+        $this->current = ['consent_id' => 'cid', 'withdrawn_at' => null];
+        $this->assertFalse($this->viewModel()->hasNewerConsent());
+    }
+
+    public function testLinkWithoutRecordedWithdrawalDoesNotClaimNewerConsent(): void
+    {
+        $this->withdrawnAt = null;
+        $this->current = ['consent_id' => 'new-id', 'withdrawn_at' => null];
+        $this->assertFalse($this->viewModel()->hasNewerConsent());
     }
 
     public function testInlineConfigurationEscapesScriptTags(): void

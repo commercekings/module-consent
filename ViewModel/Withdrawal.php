@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace CommerceKings\Consent\ViewModel;
 
 use CommerceKings\Consent\Api\BrowserIdentityInterface;
+use CommerceKings\Consent\Api\ConsentInterface;
+use CommerceKings\Consent\Api\Data\Consent;
 use CommerceKings\Consent\Api\PurposeRegistryInterface;
 use CommerceKings\Consent\Model\ConfiguredSource;
 use CommerceKings\Consent\Model\ConsentStore;
@@ -20,7 +22,8 @@ class Withdrawal implements ArgumentInterface
         private readonly PurposeRegistryInterface $purposes,
         private readonly ConsentStore $store,
         private readonly ConfiguredSource $sources,
-        private readonly BrowserIdentityInterface $browser
+        private readonly BrowserIdentityInterface $browser,
+        private readonly ConsentInterface $consents
     ) {
     }
 
@@ -37,21 +40,41 @@ class Withdrawal implements ArgumentInterface
     {
         $id = (string)$this->request->getParam('c');
         $consent = $this->links->getConsent($id, (string)$this->request->getParam('t'));
-        $row = $consent ? $this->store->load($id) : null;
-        $hash = $this->browser->hash();
+        $current = $consent ? $this->currentChoiceRecord($consent) : null;
         $config = [];
-        if ($consent && $row && $hash !== '' && hash_equals((string)$row['browser_hash'], $hash)) {
-            $source = $this->sources->get($consent->websiteId);
-            $choice = $source?->getChoice();
-            // Only turn off a choice that was withdrawn. A later explicit choice remains untouched.
-            $current = $source && $choice ? $this->store->find([
-                'purpose' => $consent->purpose, 'browser_hash' => $hash, 'website_id' => $consent->websiteId,
-                'source' => $source->getCode(), 'reference' => $choice->reference, 'source_time' => $choice->givenAt,
-            ]) : null;
-            if ($current && $current['withdrawn_at'] !== null) {
-                $config = ['*' => ['CommerceKings_Consent/js/withdrawal-banner' => ['purpose' => $consent->purpose]]];
-            }
+        // Only turn off a choice that was withdrawn. A later explicit choice remains untouched.
+        if ($consent && $current && $current['withdrawn_at'] !== null) {
+            $config = ['*' => ['CommerceKings_Consent/js/withdrawal-banner' => ['purpose' => $consent->purpose]]];
         }
         return (string)json_encode((object)$config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    public function hasNewerConsent(): bool
+    {
+        $consent = $this->links->getConsent(
+            (string)$this->request->getParam('c'),
+            (string)$this->request->getParam('t')
+        );
+        if (!$consent || $consent->withdrawnAt === null) {
+            return false;
+        }
+        $current = $this->currentChoiceRecord($consent);
+        return $current && $current['consent_id'] !== $consent->consentId
+            && $current['withdrawn_at'] === null && $this->consents->isValid((string)$current['consent_id']);
+    }
+
+    private function currentChoiceRecord(Consent $consent): ?array
+    {
+        $row = $this->store->load($consent->consentId);
+        $hash = $this->browser->hash();
+        if (!$row || $hash === '' || !hash_equals((string)$row['browser_hash'], $hash)) {
+            return null;
+        }
+        $source = $this->sources->get($consent->websiteId);
+        $choice = $source?->getChoice();
+        return $source && $choice ? $this->store->find([
+            'purpose' => $consent->purpose, 'browser_hash' => $hash, 'website_id' => $consent->websiteId,
+            'source' => $source->getCode(), 'reference' => $choice->reference, 'source_time' => $choice->givenAt,
+        ]) : null;
     }
 }

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Explain that a newer consent remains active when an already-used email withdrawal link is reopened in its original browser.
+
 - Redirect email withdrawal links to the homepage outside their original browser, while still withdrawing the recorded consent.
 
 - Reject malformed endpoint/cookie inputs, enforce form keys for AJAX and keep withdrawal HEAD requests free of side effects.
