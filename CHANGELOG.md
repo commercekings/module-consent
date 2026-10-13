@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Redirect email withdrawal links to the homepage outside their original browser, while still withdrawing the recorded consent.
+
 - Reject malformed endpoint/cookie inputs, enforce form keys for AJAX and keep withdrawal HEAD requests free of side effects.
 
 - Add a shared signed withdrawal-link API, purpose-specific confirmation page and browser preference sync, independent of feature data; protect later explicit grants from repeated link use.
