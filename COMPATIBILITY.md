@@ -8,7 +8,7 @@ combination has passed runtime testing.
 | 2.4.9 | 8.5 | Passed locally: Composer, PHP lint, DI compilation and package unit tests |
 | Older supported releases | 8.1–8.4 | Pending; use a matching Magento dependency set and services |
 
-The five-package sandbox also checks consent mapping against temporary database tables,
+The five-package sandbox also checks consent mapping and atomic withdrawal/cleanup retries against temporary database tables,
 the JavaScript lifecycle, and native Vanilla consent choices, add-to-cart and checkout in
 a browser. Endpoint regressions also cover website isolation, strict form keys, malformed input,
 HEAD safety and link replay. Its database is MariaDB 11.8. These checks do not certify other themes, third-party

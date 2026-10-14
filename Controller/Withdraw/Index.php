@@ -16,7 +16,8 @@ use Magento\Framework\Data\Form\FormKey\Validator;
  * POST /ckconsent/withdraw?purpose=<code> (valid form key required, including AJAX) - sent by
  * js/consent/provider.js when a purpose is switched off in the source (incl. "reject all", which may
  * reload the page). If the source really says "no" now, this browser's consents for the purpose are
- * withdrawn and commercekings_consent_withdrawn fires (modules using the purpose clean up their data).
+ * withdrawn and their registered module cleanup actions run after commit (with retry on failure).
+ * commercekings_consent_withdrawn remains a compatibility notification.
  */
 class Index implements HttpPostActionInterface, CsrfAwareActionInterface
 {

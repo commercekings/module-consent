@@ -7,10 +7,13 @@ use CommerceKings\Consent\Api\BrowserIdentityInterface;
 use CommerceKings\Consent\Api\ConsentGuardInterface;
 use CommerceKings\Consent\Api\ConsentInterface;
 use CommerceKings\Consent\Api\Data\Consent;
+use CommerceKings\Consent\Api\Data\WithdrawalContext;
 use CommerceKings\Consent\Api\SourceInterface;
 use Magento\Framework\Event\ManagerInterface;
 use Magento\Framework\Math\Random;
+use Magento\Framework\Lock\LockManagerInterface;
 use Magento\Store\Model\StoreManagerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * ConsentInterface + ConsentGuardInterface. Everything fails closed: no source chosen, an unknown
@@ -32,7 +35,12 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         private readonly StoreManagerInterface $storeManager,
         private readonly ManagerInterface $eventManager,
         private readonly WordingSnapshot $wording,
-        private readonly Random $random
+        private readonly Random $random,
+        private readonly WithdrawalPool $withdrawalPool,
+        private readonly WithdrawalCleanupStore $cleanupStore,
+        private readonly WithdrawalCleanup $cleanup,
+        private readonly LockManagerInterface $locks,
+        private readonly LoggerInterface $logger
     ) {
     }
 
@@ -121,7 +129,8 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
             (string)$row['browser_hash'],
             (int)$row['website_id'],
             [[(string)$row['source'], (string)$row['reference'], (string)$row['source_time']]],
-            $via
+            $via,
+            $consentId
         );
     }
 
@@ -190,30 +199,76 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
 
     /**
      * Marks first (so no request still on its way can record the same choices again), then the consents,
-     * then the event - features clear their data only after the withdrawal is stored.
+     * and durable cleanup tasks in one transaction. Module actions and the legacy event run after commit.
      *
      * @param array<int, array{0: string, 1: string, 2: string}> $marks [source, reference, source time]
      * @return string[]
      */
-    private function withdrawAll(string $purpose, string $browserHash, int $websiteId, array $marks, string $via): array
+    private function withdrawAll(
+        string $purpose,
+        string $browserHash,
+        int $websiteId,
+        array $marks,
+        string $via,
+        ?string $anchorId = null
+    ): array
     {
-        $active = $this->store->findActive($purpose, $browserHash, $websiteId);
-        foreach ($active as $row) {
-            $marks[] = [(string)$row['source'], (string)$row['reference'], (string)$row['source_time']];
+        $db = $this->store->connection();
+        if ($db->getTransactionLevel() !== 0) {
+            throw new \LogicException('Consent withdrawal must run outside a caller-owned database transaction.');
         }
-        foreach ($marks as [$source, $reference, $sourceTime]) {
-            $this->store->mark($purpose, $browserHash, $websiteId, $source, $reference, $sourceTime);
+        // Serialize the whole browser/purpose/website scope, including different signed links for it.
+        $lock = 'ck_consent_withdraw_' . hash('sha256', $purpose . '|' . $browserHash . '|' . $websiteId);
+        if (!$this->locks->lock($lock, 5)) {
+            throw new \RuntimeException('Consent withdrawal is busy; retry the request.');
         }
-        $ids = array_values(array_map(fn (array $row) => (string)$row['consent_id'], $active));
+        $ids = [];
+        $tasks = [];
+        try {
+            $db->beginTransaction();
+            try {
+                // Re-check after the scope lock: an old signed link must not withdraw a later grant.
+                $anchor = $anchorId !== null ? $this->store->load($anchorId) : null;
+                if ($anchorId !== null && (!$anchor || $anchor['withdrawn_at'] !== null)) {
+                    $db->commit();
+                    return [];
+                }
+                $active = $this->store->findActive($purpose, $browserHash, $websiteId);
+                foreach ($active as $row) {
+                    $marks[] = [(string)$row['source'], (string)$row['reference'], (string)$row['source_time']];
+                }
+                foreach ($marks as [$source, $reference, $sourceTime]) {
+                    $this->store->mark($purpose, $browserHash, $websiteId, $source, $reference, $sourceTime);
+                }
+                $ids = array_values(array_map(fn (array $row) => (string)$row['consent_id'], $active));
+                $this->store->markWithdrawn($ids, $via);
+                $tasks = $this->cleanupStore->schedule(
+                    new WithdrawalContext($purpose, $ids, $websiteId, $browserHash, $via),
+                    $this->withdrawalPool->getNames($purpose)
+                );
+                $db->commit();
+            } catch (\Throwable $error) {
+                $db->rollBack();
+                throw $error;
+            }
+        } finally {
+            $this->locks->unlock($lock);
+        }
+        $this->cleanup->run($tasks);
         if ($ids) {
-            $this->store->markWithdrawn($ids, $via);
-            $this->eventManager->dispatch(self::EVENT_WITHDRAWN, [
-                'purpose' => $purpose,
-                'browser_hash' => $browserHash,
-                'website_id' => $websiteId,
-                'consent_ids' => $ids,
-                'via' => $via,
-            ]);
+            try {
+                $this->eventManager->dispatch(self::EVENT_WITHDRAWN, [
+                    'purpose' => $purpose,
+                    'browser_hash' => $browserHash,
+                    'website_id' => $websiteId,
+                    'consent_ids' => $ids,
+                    'via' => $via,
+                ]);
+            } catch (\Throwable $error) {
+                $this->logger->error('Consent withdrawal notification failed after commit.', [
+                    'exception_class' => get_class($error),
+                ]);
+            }
         }
         return $ids;
     }

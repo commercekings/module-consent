@@ -74,4 +74,21 @@
             <column name="updated_at"/>
         </index>
     </table>
+    <!-- Durable module actions; no foreign key so evidence retention cannot erase unfinished cleanup. -->
+    <table name="ck_consent_cleanup" resource="default" engine="innodb" comment="CK consent: pending withdrawal cleanup">
+        <column xsi:type="int" name="task_id" unsigned="true" nullable="false" identity="true" comment="Cleanup task"/>
+        <column xsi:type="varchar" name="consent_id" nullable="false" length="32" comment="Original withdrawn consent"/>
+        <column xsi:type="varchar" name="handler" nullable="false" length="80" comment="Stable module handler name"/>
+        <column xsi:type="varchar" name="purpose" nullable="false" length="64" comment="Withdrawn purpose"/>
+        <column xsi:type="smallint" name="website_id" unsigned="true" nullable="false" comment="Original website"/>
+        <column xsi:type="varchar" name="browser_hash" nullable="false" length="64" comment="Original browser hash"/>
+        <column xsi:type="varchar" name="via" nullable="false" length="16" comment="Withdrawal origin"/>
+        <column xsi:type="int" name="attempts" unsigned="true" nullable="false" default="0" comment="Failed attempts"/>
+        <column xsi:type="timestamp" name="next_attempt_at" nullable="false" default="CURRENT_TIMESTAMP" comment="Next cleanup attempt"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY"><column name="task_id"/></constraint>
+        <constraint xsi:type="unique" referenceId="CK_CONSENT_CLEANUP_CONSENT_HANDLER">
+            <column name="consent_id"/><column name="handler"/>
+        </constraint>
+        <index referenceId="CK_CONSENT_CLEANUP_NEXT_ATTEMPT" indexType="btree"><column name="next_attempt_at"/></index>
+    </table>
 </schema>

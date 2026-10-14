@@ -29,8 +29,11 @@ interface ConsentInterface
 
     /**
      * Withdraws this consent and every other active consent of the same browser for the same purpose on
-     * the same website; the same choice can never be recorded again. Persisted first, then the event
-     * commercekings_consent_withdrawn fires. Returns the consent ids withdrawn now.
+     * the same website; the same choice can never be recorded again. Withdrawal and pending handler
+     * actions commit atomically, then handlers run and commercekings_consent_withdrawn notifies legacy
+     * observers. Failed handlers remain queued for retry without restoring consent. An already
+     * withdrawn consent never revokes a later grant. Call outside a caller-owned DB transaction.
+     * Returns the consent ids withdrawn now; this does not imply every cleanup action has completed.
      *
      * @param string $via who withdrew: "banner", "email", "admin", ...
      * @return string[]

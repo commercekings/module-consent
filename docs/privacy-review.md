@@ -11,6 +11,7 @@ This package provides permission records and integrations, not a declaration tha
 - Server checks and the SQL guard cap permission at the configured lifetime from the saved choice time; reducing the lifetime also invalidates older permissions. A source may expire consent sooner. This prevents old choices outliving the withdrawal-mark retention safety minimum.
 - Always-on categories cannot grant feature purposes. The default reminder switch describes use of the checkout email explicitly and remains independent of analytics.
 - Withdrawal marks cannot be removed before the longest configured website source-cookie lifetime plus one day. Consent evidence retention remains the configured period after expiry or withdrawal.
+- Withdrawal and pending module cleanup commit together. Handlers run afterward; failed cleanup never restores permission. Unfinished `ck_consent_cleanup` tasks retain pseudonymous scope independently of evidence until their registered handler succeeds. Monitor pending tasks and restore disabled handlers; successful tasks are deleted. Module cleanup must preserve later grants and native Magento data outside its ownership.
 - `consent:config:export` captures store wording, mappings, revisions, banner configuration and an optional supplied copy of the published policy. Preserve exports with the release, policy and visual evidence.
 
 ## Shop information needed before publication

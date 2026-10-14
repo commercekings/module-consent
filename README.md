@@ -57,11 +57,57 @@ CommerceKings_ConsentVanilla   CommerceKings_AbandonedCart
 2. **When the visitor's data is captured** (a POST request): `Api\ConsentInterface::getCurrent('cart_reminder'): ?Api\Data\Consent`. Store `$consent->consentId` with your data. May set the browser cookie.
 3. **Store it race-safely:** put `Api\ConsentGuardInterface::validCondition($column)` into the same UPDATE that writes or uses the consent id (`$column` can be a quoted literal: `$db->quote($consentId)`). The database then orders it against a withdrawal.
 4. **Later (cron, queue consumer – no cookies):** `isValid($consentId)`, or the guard condition inside your claim UPDATE.
-5. **Withdrawal:** observe **`commercekings_consent_withdrawn`** `{purpose, browser_hash, website_id, consent_ids[], via}` and delete or clear your data for those consent ids. It fires **after** the withdrawal is stored. For email links, inject `Api\WithdrawalLinkInterface` and call `getUrl($consentId)` in a store on that consent's website. Consent owns the signed link, confirmation page and browser preference sync; your feature owns its data cleanup. Trusted server code can also call `withdraw($consentId, 'email')` directly.
+5. **Withdrawal:** implement `Api\WithdrawalHandlerInterface` and register a named handler in `Model\WithdrawalPool` (see below). Consent commits revocation and pending actions together, then runs cleanup. Your feature owns its data cleanup. For email links, inject `Api\WithdrawalLinkInterface` and call `getUrl($consentId)` in a store on that consent's website. Consent owns the signed link, confirmation page and browser preference sync. Trusted server code can also call `withdraw($consentId, 'email')` directly, outside a caller-owned database transaction.
 6. **Browser:** `CommerceKings_Consent/js/consent/provider` – `hasConsent(purpose)`, `onChange(purpose, callback(isOn))` (on "on" the server has recorded the choice before your callback runs), `accept(purpose)` / `revoke(purpose)` (save the mapped source choice while preserving other choices).
 
 ### The guarantee
-Once a withdrawal has been stored, no guarded write or claim can use that consent any more: either the guarded UPDATE runs first (and the withdrawal event then finds its row), or it sees the consent withdrawn and changes nothing. A mail already handed to the mail server can't be recalled. This relies on InnoDB locking reads in `UPDATE … WHERE EXISTS (SELECT …)` under REPEATABLE READ (Magento's default) – verified with two connections against MariaDB 10.6.
+Once a withdrawal has been stored, no guarded write or claim can use that consent any more: either the guarded UPDATE runs first (and the withdrawal handler then finds its row), or it sees the consent withdrawn and changes nothing. A mail already handed to the mail server can't be recalled. This relies on InnoDB locking reads in `UPDATE … WHERE EXISTS (SELECT …)` under REPEATABLE READ (Magento's default) – verified with two connections against MariaDB 10.6.
+
+### Withdrawal handlers
+
+```xml
+<type name="CommerceKings\Consent\Model\WithdrawalPool">
+    <arguments>
+        <argument name="handlers" xsi:type="array">
+            <item name="your_purpose" xsi:type="array">
+                <item name="your_module_cleanup" xsi:type="object">Vendor\Module\Model\WithdrawalHandler</item>
+            </item>
+        </argument>
+    </arguments>
+</type>
+```
+
+The handler implements `execute(Api\Data\WithdrawalContext $context): void`. Context contains
+`purpose`, `consentIds`, `websiteId`, `browserHash` and `via`; no email or feature payload. Several
+handlers may share a purpose. Use a stable registration name (up to 80 characters); pending tasks
+refer to that name across deployments. The core works without any handlers.
+
+Both banner and signed-link withdrawal use one checkpoint. Magento's native lock manager serializes
+the browser/purpose/website scope. Withdrawal marks, revoked consent records and pending actions in
+`ck_consent_cleanup` are written in one database transaction. Handlers run after commit, with no
+scope lock held. A failed handler cannot restore permission or stop another handler from running.
+The shared browser identity remains available for other purposes; evidence is marked withdrawn,
+not deleted immediately.
+
+Execution is **at least once**: a task is removed only after its handler returns successfully.
+Handlers must be idempotent, use only the original consent IDs, and work without a visitor session.
+The current implementation sends one consent ID per task; do not assume the context is tied to the
+current browser, customer or a still-retained evidence row. Preserve later grants and unrelated
+data. A module can use its own transaction for local cleanup; external operations must also tolerate
+retries. Clearing feature input (such as a checkout email) is separate from withdrawing consent.
+
+Cron `commercekings_consent_retry_withdrawals` runs each minute, processes up to 100 due tasks, and
+backs off failed actions from one minute to one hour. Native task locks prevent concurrent workers
+from executing the same task; use an appropriate shared Magento lock backend in a multi-node shop.
+Successful tasks are deleted. Unfinished tasks survive evidence pruning and remain pending if their
+module is disabled; restore its handler to resume cleanup. Review pending tasks in `ck_consent_cleanup`
+and cleanup warnings in Magento logs. Logs omit exception messages to avoid leaking feature data.
+
+The existing `commercekings_consent_withdrawn` event retains its payload for compatibility and fires
+after commit and immediate handler attempts. It is a notification, has no durable retry, and observer
+failures are logged without undoing withdrawal. Move mandatory cleanup into a pool handler, removing
+the corresponding observer so the action runs once per attempt. Withdrawal success means permission
+is revoked; module cleanup may still be pending.
 
 ## What the module does by itself
 - `GET /ckconsent/optout?c=&t=` – a signed, one-click email withdrawal for the recorded purpose, usable from any browser without its cookies. The HMAC binds the consent id and website to the deployment `crypt/key`; the URL contains no email address or feature identifier. Links remain usable while the consent record is retained, including after expiry; deleting the record or changing the signing key invalidates them. Only the original browser sees confirmation and can synchronize its withdrawn preferences; a different browser or one without its consent identity redirects to the homepage after withdrawal. Repeated clicks leave a later explicit consent intact. Invalid or cross-website links redirect to the homepage. HEAD requests do not withdraw or synchronize preferences.
@@ -131,6 +177,7 @@ The shop supplies its controller/contact details, actual recipients/providers, d
 | `ck_consent` | one row per recorded consent (PK `consent_id`, unique per choice) |
 | `ck_consent_snapshot` | wording snapshots (PK `snapshot_hash`), one per distinct wording per store view |
 | `ck_consent_withdrawal` | withdrawal marks: latest withdrawn source time per browser + purpose + website + choice series |
+| `ck_consent_cleanup` | unfinished module cleanup tasks, removed on success; retained independently of evidence |
 
 ## Tests
 From the Magento root, with the package installed:
@@ -142,5 +189,6 @@ vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php vendor/com
 Run the mapping regression against a local Magento database with the module schema installed:
 ```sh
 vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php vendor/commercekings/module-consent/Test/Integration/ConsentMappingTest.php
+vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php vendor/commercekings/module-consent/Test/Integration/WithdrawalWorkflowTest.php
 ```
 It uses temporary tables and checks stored consent validation and guarded job updates across two websites, including removal and restoration of mappings. It leaves application records unchanged. To run from another directory, set `MAGENTO_ROOT` to the installed Magento root; the test supports Composer installs and source mounts without relying on package directory depth.

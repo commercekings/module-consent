@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Centralize banner and email withdrawals in one atomic core checkpoint with typed, DI-registered module handlers. Persist unfinished actions alongside revocation, run cleanup after commit, and retry failures through native cron and locks without restoring consent or touching later grants. Retain the legacy event as a notification.
+
 - Use Magento's cookie path and domain for browser identities and withdrawal hints; keep their admin-configured consent lifetime and remove the hint's hardcoded lifetime fallback.
 
 - Generate browser and consent identifiers with Magento's random generator while retaining 32 lowercase hex characters; use Magento SQL expressions for withdrawal timestamps.

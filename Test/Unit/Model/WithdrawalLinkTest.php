@@ -5,11 +5,8 @@ namespace CommerceKings\Consent\Test\Unit\Model;
 
 use CommerceKings\Consent\Api\ConsentInterface;
 use CommerceKings\Consent\Api\Data\Consent;
-use CommerceKings\Consent\Model\ConsentStore;
 use CommerceKings\Consent\Model\WithdrawalLink;
 use Magento\Framework\App\DeploymentConfig;
-use Magento\Framework\DB\Adapter\AdapterInterface;
-use Magento\Framework\DB\Select;
 use Magento\Framework\Encryption\Encryptor;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Encryption\KeyValidator;
@@ -29,7 +26,6 @@ class WithdrawalLinkTest extends TestCase
     private array $events = [];
     private array $withdrawals = [];
     private bool $fail = false;
-    private bool $withdrawUnderLock = false;
 
     private function record(?string $withdrawn = null): Consent
     {
@@ -65,32 +61,8 @@ class WithdrawalLinkTest extends TestCase
         $store->method('getWebsiteId')->willReturnCallback(fn () => $this->website);
         $stores = $this->createStub(StoreManagerInterface::class);
         $stores->method('getStore')->willReturn($store);
-        $select = $this->createStub(Select::class);
-        $select->method('from')->willReturnSelf();
-        $select->method('where')->willReturnSelf();
-        $select->method('forUpdate')->willReturnCallback(function ($lock) use ($select) {
-            $this->assertTrue($lock);
-            $this->events[] = 'lock';
-            return $select;
-        });
-        $db = $this->createStub(AdapterInterface::class);
-        $db->method('select')->willReturn($select);
-        foreach (['beginTransaction', 'commit', 'rollBack'] as $method) {
-            $db->method($method)->willReturnCallback(function () use ($method) {
-                $this->events[] = $method;
-            });
-        }
-        $db->method('fetchAll')->willReturnCallback(function () {
-            if ($this->withdrawUnderLock) {
-                $this->record = $this->record('2026-01-01 00:00:00');
-            }
-            return [];
-        });
-        $storage = $this->createStub(ConsentStore::class);
-        $storage->method('connection')->willReturn($db);
-        $storage->method('tableName')->willReturn('ck_consent');
         $encryptor ??= new Encryptor($this->createStub(Random::class), $config, $this->createStub(KeyValidator::class));
-        return new WithdrawalLink($consents, $config, $url, $stores, $storage, $encryptor);
+        return new WithdrawalLink($consents, $config, $url, $stores, $encryptor);
     }
 
     private function token(WithdrawalLink $service): string
@@ -159,27 +131,18 @@ class WithdrawalLinkTest extends TestCase
         $this->token($service);
     }
 
-    public function testWithdrawalLocksReloadsAndCommitsOnlyOnceForRepeatedClicks(): void
+    public function testWithdrawalDelegatesToTheCentralCheckpointOnlyOnceForRepeatedClicks(): void
     {
         $service = $this->service();
         $token = $this->token($service);
         $this->events = [];
         $this->assertNotNull($service->withdraw(str_repeat('a', 32), $token));
-        $this->assertSame(['beginTransaction', 'lock', 'read', 'commit'], $this->events);
+        $this->assertSame(['read'], $this->events);
         $this->assertNotNull($service->withdraw(str_repeat('a', 32), $token));
         $this->assertSame([[str_repeat('a', 32), 'email']], $this->withdrawals);
     }
 
-    public function testWithdrawalUsesFreshRecordAfterLocking(): void
-    {
-        $service = $this->service();
-        $token = $this->token($service);
-        $this->withdrawUnderLock = true;
-        $this->assertNotNull($service->withdraw(str_repeat('a', 32), $token));
-        $this->assertSame([], $this->withdrawals);
-    }
-
-    public function testWithdrawalFailureRollsBack(): void
+    public function testCoreWithdrawalFailurePropagatesToTheCaller(): void
     {
         $service = $this->service();
         $token = $this->token($service);
@@ -190,7 +153,7 @@ class WithdrawalLinkTest extends TestCase
             $this->fail('expected failure');
         } catch (\RuntimeException $error) {
             $this->assertSame('withdrawal failed', $error->getMessage());
-            $this->assertSame(['beginTransaction', 'lock', 'read', 'rollBack'], $this->events);
+            $this->assertSame(['read'], $this->events);
         }
     }
 

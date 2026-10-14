@@ -11,6 +11,11 @@ use CommerceKings\Consent\Model\ConfiguredSource;
 use CommerceKings\Consent\Model\ConsentService;
 use CommerceKings\Consent\Model\PurposePool;
 use CommerceKings\Consent\Model\WordingSnapshot;
+use CommerceKings\Consent\Model\WithdrawalPool;
+use CommerceKings\Consent\Model\WithdrawalCleanupStore;
+use CommerceKings\Consent\Model\WithdrawalCleanup;
+use Magento\Framework\Lock\LockManagerInterface;
+use Psr\Log\NullLogger;
 use CommerceKings\Consent\Test\Unit\InMemoryConsentStore;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\Event\ManagerInterface;
@@ -44,6 +49,8 @@ class ConsentServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->store = new InMemoryConsentStore();
+        $this->store->db = $this->createStub(AdapterInterface::class);
+        $this->store->db->method('getTransactionLevel')->willReturn(0);
     }
 
     private function service(): ConsentService
@@ -80,7 +87,12 @@ class ConsentServiceTest extends TestCase
         ]);
         $wording = $this->createStub(WordingSnapshot::class);
         $wording->method('currentHash')->willReturnCallback(fn () => $this->wordingHash);
-        return new ConsentService($this->store, $configured, $purposes, $browser, $config, $stores, $events, $wording, new Random());
+        $locks = $this->createStub(LockManagerInterface::class);
+        $locks->method('lock')->willReturn(true);
+        $tasks = $this->createStub(WithdrawalCleanupStore::class);
+        $tasks->method('schedule')->willReturn([]);
+        return new ConsentService($this->store, $configured, $purposes, $browser, $config, $stores, $events, $wording,
+            new Random(), new WithdrawalPool(), $tasks, $this->createStub(WithdrawalCleanup::class), $locks, new NullLogger());
     }
 
     private function choose(array $purposes, string $time, string $reference = 'cid-1', string $revision = '1'): void

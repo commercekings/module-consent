@@ -20,7 +20,6 @@ class WithdrawalLink implements WithdrawalLinkInterface
         private readonly DeploymentConfig $deploymentConfig,
         private readonly UrlInterface $url,
         private readonly StoreManagerInterface $stores,
-        private readonly ConsentStore $store,
         private readonly EncryptorInterface $encryptor
     ) {
     }
@@ -49,27 +48,17 @@ class WithdrawalLink implements WithdrawalLinkInterface
         return $consent && $consent->websiteId === $websiteId ? $consent : null;
     }
 
-    /** Serialize use of a link so a repeated request cannot revoke a later explicit re-grant. */
+    /** Consent's central checkpoint serializes withdrawal; cleanup cannot roll it back. */
     public function withdraw(string $consentId, string $token): ?Consent
     {
         if (!$this->isSigned($consentId, $token)) {
             return null;
         }
-        $db = $this->store->connection();
-        $db->beginTransaction();
-        try {
-            $db->fetchAll($db->select()->from($this->store->tableName(), 'consent_id')
-                ->where('consent_id = ?', $consentId)->forUpdate(true));
-            $consent = $this->getConsent($consentId, $token);
-            if ($consent && $consent->withdrawnAt === null) {
-                $this->consents->withdraw($consentId, 'email');
-            }
-            $db->commit();
-            return $consent;
-        } catch (\Throwable $error) {
-            $db->rollBack();
-            throw $error;
+        $consent = $this->getConsent($consentId, $token);
+        if ($consent && $consent->withdrawnAt === null) {
+            $this->consents->withdraw($consentId, 'email');
         }
+        return $consent;
     }
 
     private function isSigned(string $consentId, string $token): bool

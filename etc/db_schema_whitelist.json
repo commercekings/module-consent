@@ -1,4 +1,19 @@
 {
+    "ck_consent_cleanup": {
+        "column": {
+            "task_id": true,
+            "consent_id": true,
+            "handler": true,
+            "purpose": true,
+            "website_id": true,
+            "browser_hash": true,
+            "via": true,
+            "attempts": true,
+            "next_attempt_at": true
+        },
+        "index": {"CK_CONSENT_CLEANUP_NEXT_ATTEMPT": true},
+        "constraint": {"PRIMARY": true, "CK_CONSENT_CLEANUP_CONSENT_HANDLER": true}
+    },
     "ck_consent": {
         "column": {
             "consent_id": true,

@@ -13,6 +13,7 @@ class InMemoryConsentStore extends ConsentStore
     /** @var array<string, string> mark key => source_time */
     public array $marks = [];
     public string $now = '2026-10-10 12:00:00';
+    public \Magento\Framework\DB\Adapter\AdapterInterface $db;
 
     public function __construct()
     {
@@ -21,6 +22,11 @@ class InMemoryConsentStore extends ConsentStore
     public function load(string $consentId): ?array
     {
         return $this->rows[$consentId] ?? null;
+    }
+
+    public function connection(): \Magento\Framework\DB\Adapter\AdapterInterface
+    {
+        return $this->db;
     }
 
     public function find(array $key): ?array

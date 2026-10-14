@@ -159,7 +159,12 @@ class ConsentMappingTest extends TestCase
             $stores,
             $this->createStub(ManagerInterface::class),
             $this->createStub(WordingSnapshot::class),
-            new \Magento\Framework\Math\Random()
+            new \Magento\Framework\Math\Random(),
+            new \CommerceKings\Consent\Model\WithdrawalPool(),
+            $this->createStub(\CommerceKings\Consent\Model\WithdrawalCleanupStore::class),
+            $this->createStub(\CommerceKings\Consent\Model\WithdrawalCleanup::class),
+            $this->createStub(\Magento\Framework\Lock\LockManagerInterface::class),
+            new \Psr\Log\NullLogger()
         );
     }
 }
