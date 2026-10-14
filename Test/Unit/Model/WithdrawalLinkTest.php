@@ -10,7 +10,11 @@ use CommerceKings\Consent\Model\WithdrawalLink;
 use Magento\Framework\App\DeploymentConfig;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\DB\Select;
+use Magento\Framework\Encryption\Encryptor;
+use Magento\Framework\Encryption\EncryptorInterface;
+use Magento\Framework\Encryption\KeyValidator;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Math\Random;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\Store;
 use Magento\Store\Model\StoreManagerInterface;
@@ -20,7 +24,7 @@ class WithdrawalLinkTest extends TestCase
 {
     private ?Consent $record = null;
     private int $website = 1;
-    private string $key = 'secret';
+    private mixed $key = 'secret';
     private array $params = [];
     private array $events = [];
     private array $withdrawals = [];
@@ -33,7 +37,7 @@ class WithdrawalLinkTest extends TestCase
             '2020-01-01 00:00:00', '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00', $withdrawn);
     }
 
-    private function service(): WithdrawalLink
+    private function service(?EncryptorInterface $encryptor = null): WithdrawalLink
     {
         $this->record = $this->record();
         $consents = $this->createStub(ConsentInterface::class);
@@ -85,7 +89,8 @@ class WithdrawalLinkTest extends TestCase
         $storage = $this->createStub(ConsentStore::class);
         $storage->method('connection')->willReturn($db);
         $storage->method('tableName')->willReturn('ck_consent');
-        return new WithdrawalLink($consents, $config, $url, $stores, $storage);
+        $encryptor ??= new Encryptor($this->createStub(Random::class), $config, $this->createStub(KeyValidator::class));
+        return new WithdrawalLink($consents, $config, $url, $stores, $storage, $encryptor);
     }
 
     private function token(WithdrawalLink $service): string
@@ -125,6 +130,7 @@ class WithdrawalLinkTest extends TestCase
         $this->assertNull($service->getConsent(str_repeat('a', 32), $token));
         $this->website = 1;
         $this->key = 'changed-key';
+        $service = $this->service(); // A new deployment starts with a new native encryptor instance.
         $this->assertNull($service->getConsent(str_repeat('a', 32), $token));
         $this->assertSame([], $this->events);
     }
@@ -195,5 +201,108 @@ class WithdrawalLinkTest extends TestCase
         $this->assertNull($service->withdraw(str_repeat('a', 32), 'bad'));
         $this->assertSame([], $this->events);
         $this->assertSame([], $this->withdrawals);
+    }
+
+    public function testNewLinksUseInjectedMagentoEncryptor(): void
+    {
+        $encryptor = $this->createMock(EncryptorInterface::class);
+        $encryptor->expects($this->once())->method('hash')
+            ->with('commercekings_consent_withdrawal|1|' . str_repeat('a', 32))->willReturn(str_repeat('b', 64));
+        $encryptor->expects($this->never())->method('validateHash');
+        $this->assertSame(str_repeat('b', 64), $this->token($this->service($encryptor)));
+    }
+
+    public function testMultipleKeysUseCurrentKeyAndRejectRawDeploymentTokens(): void
+    {
+        $this->key = "old-key\nnew-key";
+        $service = $this->service();
+        $id = str_repeat('a', 32);
+        $payload = 'commercekings_consent_withdrawal|1|' . $id;
+        $native = hash_hmac('sha256', $payload, 'new-key');
+        $legacy = hash_hmac('sha256', $payload, $this->key);
+        $this->assertSame($native, $this->token($service));
+        $this->assertNotSame($native, $legacy);
+        $this->events = [];
+        $this->assertNull($service->getConsent($id, $legacy));
+        $this->assertNull($service->getConsent(str_repeat('b', 32), $native));
+        $this->website = 2;
+        $this->assertNull($service->getConsent($id, $native));
+        $this->website = 1;
+        $this->assertNull($service->getConsent($id, hash_hmac('sha256', $payload, 'old-key')));
+        $this->key = 'different-key';
+        $this->assertNull($this->service()->getConsent($id, $native));
+        $this->assertSame([], $this->events);
+    }
+
+    public function testEncodedKeyRejectsRawSignatureAndNativeWithdrawalKeepsReplayProtection(): void
+    {
+        if (!defined('Magento\\Framework\\Config\\ConfigOptionsListConstants::STORE_KEY_ENCODED_RANDOM_STRING_PREFIX')) {
+            $this->markTestSkipped('This Magento version does not support encoded deployment keys.');
+        }
+        $decoded = str_repeat('k', 32);
+        $this->key = 'base64' . base64_encode($decoded);
+        $service = $this->service();
+        $id = str_repeat('a', 32);
+        $payload = 'commercekings_consent_withdrawal|1|' . $id;
+        $native = hash_hmac('sha256', $payload, $decoded);
+        $legacy = hash_hmac('sha256', $payload, $this->key);
+        $this->assertSame($native, $this->token($service));
+        $this->assertNotSame($native, $legacy);
+        $this->events = [];
+        $this->assertNull($service->getConsent($id, $legacy));
+        $this->assertNull($service->withdraw($id, $legacy));
+        $this->assertSame([], $this->events);
+        $this->assertSame($this->record, $service->getConsent($id, $native));
+        $this->assertNotNull($service->withdraw($id, $native));
+        $this->assertNotNull($service->withdraw($id, $native));
+        $this->assertSame([[$id, 'email']], $this->withdrawals);
+    }
+
+    public function testUnkeyedPasswordAndMalformedHashesAreRejectedWithoutReadingOrWithdrawing(): void
+    {
+        $service = $this->service();
+        $id = str_repeat('a', 32);
+        $payload = 'commercekings_consent_withdrawal|1|' . $id;
+        foreach ([hash('sha256', $payload), hash('sha256', 'salt' . $payload) . ':salt:1',
+            str_repeat('A', 64), str_repeat('0', 64), str_repeat('0', 64) . "\n"] as $token) {
+            $this->assertNull($service->getConsent($id, $token));
+            $this->assertNull($service->withdraw($id, $token));
+        }
+        $this->assertSame([], $this->events);
+        $this->assertSame([], $this->withdrawals);
+    }
+
+    public function testNativeSigningFailureRejectsAnOtherwiseValidLink(): void
+    {
+        $encryptor = $this->createStub(EncryptorInterface::class);
+        $encryptor->method('hash')->willThrowException(new \RuntimeException('No key available'));
+        $service = $this->service($encryptor);
+        $id = str_repeat('a', 32);
+        $legacy = hash_hmac('sha256', 'commercekings_consent_withdrawal|1|' . $id, $this->key);
+        $this->assertNull($service->getConsent($id, $legacy));
+        $this->assertNull($service->withdraw($id, $legacy));
+        $this->assertSame([], $this->events);
+        $this->expectException(\RuntimeException::class);
+        $service->getUrl($id);
+    }
+
+    /** @dataProvider invalidKeys */
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidKeys')]
+    public function testInvalidDeploymentKeyCannotAuthorizePredictableWithdrawal(mixed $key): void
+    {
+        $this->key = $key;
+        $service = $this->service();
+        $id = str_repeat('a', 32);
+        $token = hash_hmac('sha256', 'commercekings_consent_withdrawal|1|' . $id, (string)$key);
+        $this->assertNull($service->getConsent($id, $token));
+        $this->assertNull($service->withdraw($id, $token));
+        $this->assertSame([], $this->events);
+        $this->expectException(\LogicException::class);
+        $service->getUrl($id);
+    }
+
+    public static function invalidKeys(): array
+    {
+        return ['missing' => [null], 'empty' => [''], 'whitespace' => [" \t\n"], 'non-string' => [42]];
     }
 }

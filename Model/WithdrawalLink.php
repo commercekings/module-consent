@@ -7,6 +7,7 @@ use CommerceKings\Consent\Api\ConsentInterface;
 use CommerceKings\Consent\Api\Data\Consent;
 use CommerceKings\Consent\Api\WithdrawalLinkInterface;
 use Magento\Framework\App\DeploymentConfig;
+use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\StoreManagerInterface;
@@ -19,7 +20,8 @@ class WithdrawalLink implements WithdrawalLinkInterface
         private readonly DeploymentConfig $deploymentConfig,
         private readonly UrlInterface $url,
         private readonly StoreManagerInterface $stores,
-        private readonly ConsentStore $store
+        private readonly ConsentStore $store,
+        private readonly EncryptorInterface $encryptor
     ) {
     }
 
@@ -72,16 +74,33 @@ class WithdrawalLink implements WithdrawalLinkInterface
 
     private function isSigned(string $consentId, string $token): bool
     {
-        return $consentId !== '' && (bool)preg_match('/^[a-f0-9]{64}$/D', $token)
-            && hash_equals($this->sign($consentId, (int)$this->stores->getStore()->getWebsiteId()), $token);
+        if ($consentId === '' || !preg_match('/^[a-f0-9]{64}$/D', $token)) {
+            return false;
+        }
+        $websiteId = (int)$this->stores->getStore()->getWebsiteId();
+        try {
+            return hash_equals($this->sign($consentId, $websiteId), $token);
+        } catch (\LogicException | \RuntimeException) {
+            return false;
+        }
     }
 
     private function sign(string $consentId, int $websiteId): string
     {
-        $key = (string)$this->deploymentConfig->get('crypt/key');
-        if ($key === '') {
+        $this->assertDeploymentKey();
+        return $this->encryptor->hash($this->payload($consentId, $websiteId));
+    }
+
+    private function payload(string $consentId, int $websiteId): string
+    {
+        return 'commercekings_consent_withdrawal|' . $websiteId . '|' . $consentId;
+    }
+
+    private function assertDeploymentKey(): void
+    {
+        $key = $this->deploymentConfig->get('crypt/key');
+        if (!is_string($key) || trim($key) === '') {
             throw new \LogicException('The deployment crypt key is required for consent withdrawal links.');
         }
-        return hash_hmac('sha256', 'commercekings_consent_withdrawal|' . $websiteId . '|' . $consentId, $key);
     }
 }

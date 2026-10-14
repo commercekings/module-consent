@@ -74,6 +74,14 @@ Once a withdrawal has been stored, no guarded write or claim can use that consen
 - `#commercekings-consent-config` in `<head>`: chosen source, its JS adapter, the purposes, the source's settings. The loader plugin `js/consent/adapter!` loads **only** the chosen adapter; none / load error → a null adapter (never consent).
 - Cron `commercekings_consent_clean_up` (daily 03:30): deletes consent records *Keep records for (days)* after expiry or withdrawal. Withdrawal marks are retained for at least the longest website source-cookie lifetime plus one day, even if evidence retention is shorter.
 
+Email withdrawal signatures use Magento's `EncryptorInterface::hash()` (HMAC-SHA256 with
+Magento's current, decoded deployment key) for generation and verification. There is no
+legacy raw-key fallback; older development links can stop working when their signatures
+differ from Magento's current-key signatures. Tokens stay 64 lowercase hex characters and are compared with
+`hash_equals`; the password-hash formats accepted by `validateHash()` are not link signatures.
+Website isolation, locked withdrawal and replay protection still apply. A missing,
+blank or non-string deployment key prevents link generation and signature validation fails closed.
+
 ## Admin
 **Stores > Configuration > CommerceKings > Consent** (default / website). Editable: *Source* (None or a registered source – its banner is the one shown; changing it invalidates every consent of the old one), *Privacy / cookie policy page* (every banner links it – `Api\BannerSettingsInterface`), **Source cookie name** (the cookie the banner keeps the visitor's choice in; changing it asks everyone again), **Source revision** (raising it asks every visitor again – the shop's decision, so a package upgrade never changes it) and **Source cookie lifetime (days)** (default 182; it also caps server permission from the saved choice time; a source may expire it sooner), *Keep records for (days)* (default 183). **Record consent for** (website; optional purposes only, none ticked by default – see `record`; turning it on records choices made from then on; the categories table shows each purpose as recorded/required/not recorded). **Read-only** – defined in code, shown for review: *Source version*, *Source categories* (with the purposes each grants and the cookies deleted when off). Flush the full page cache after a change.
 

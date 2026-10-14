@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Generate and verify withdrawal signatures exclusively through Magento's native encryptor, without a legacy raw-key fallback; reject invalid deployment keys or signing failures without reading or withdrawing consent.
+
 - Explain that a newer consent remains active when an already-used email withdrawal link is reopened in its original browser.
 
 - Redirect email withdrawal links to the homepage outside their original browser, while still withdrawing the recorded consent.
