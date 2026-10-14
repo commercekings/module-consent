@@ -15,6 +15,7 @@ use Magento\Framework\View\Page\Config;
 use Magento\Framework\View\Page\Title;
 use Magento\Framework\View\Result\Page;
 use Magento\Framework\View\Result\PageFactory;
+use Magento\Framework\Data\Form\FormKey\Validator;
 use PHPUnit\Framework\TestCase;
 
 class OptoutTest extends TestCase
@@ -28,15 +29,22 @@ class OptoutTest extends TestCase
         mixed $id = null,
         mixed $token = null,
         string $browserHash = 'original',
-        ?string $recordHash = 'original'
+        ?string $recordHash = 'original',
+        mixed $key = 'valid',
+        bool $keyValid = true
     ): Index {
         $request = $this->createStub(Http::class);
         $request->method('getMethod')->willReturn($method);
-        $request->method('getParam')->willReturnCallback(fn ($key) => ['c' => $id ?? str_repeat('a', 32), 't' => $token ?? str_repeat('b', 64)][$key]);
+        $request->method('getParam')->willReturnCallback(fn ($name) => ['c' => $id ?? str_repeat('a', 32), 't' => $token ?? str_repeat('b', 64), 'form_key' => $key][$name]);
         $links = $this->createMock(WithdrawalLink::class);
-        $allowed = $method === 'GET' && $id === null && $token === null;
-        $links->expects($allowed ? $this->once() : $this->never())->method('withdraw')
+        $allowed = in_array($method, ['GET', 'POST'], true) && $id === null && $token === null
+            && ($method !== 'POST' || (is_string($key) && $keyValid));
+        $links->expects($allowed && $method === 'POST' ? $this->once() : $this->never())->method('withdraw')
             ->with(str_repeat('a', 32), str_repeat('b', 64))->willReturn($record);
+        $links->expects($allowed && $method === 'GET' ? $this->once() : $this->never())->method('getConsent')
+            ->with(str_repeat('a', 32), str_repeat('b', 64))->willReturn($record);
+        $validator = $this->createStub(Validator::class);
+        $validator->method('validate')->willReturn($keyValid);
         $store = $this->createMock(ConsentStore::class);
         $store->expects($allowed && $record ? $this->once() : $this->never())->method('load')
             ->with(str_repeat('a', 32))->willReturn($recordHash === null ? null : ['browser_hash' => $recordHash]);
@@ -59,17 +67,18 @@ class OptoutTest extends TestCase
         $page = $this->createStub(Page::class);
         $page->method('getConfig')->willReturn($config);
         $pageFactory = $this->createMock(PageFactory::class);
-        $showsPage = $allowed && $record && $browserHash !== '' && $recordHash === $browserHash;
+        $owner = $browserHash !== '' && $recordHash === $browserHash;
+        $showsPage = $allowed && $record && ($owner || ($method === 'GET' && $record->withdrawnAt === null));
         $pageFactory->expects($showsPage ? $this->once() : $this->never())->method('create')->willReturn($page);
-        return new Index($request, $links, $pageFactory, $redirectFactory, $browser, $store);
+        return new Index($request, $links, $pageFactory, $redirectFactory, $browser, $store, $validator);
     }
 
-    public function testSignedConsentShowsGenericConfirmation(): void
+    public function testSignedGetShowsConfirmationWithoutWithdrawing(): void
     {
         $record = new Consent('cid', 'some_feature', 1, 'source', 'choice', '2020-01-01 00:00:00',
             '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00');
         $this->assertInstanceOf(Page::class, $this->controller($record)->execute());
-        $this->assertSame(['title' => 'Consent withdrawn', 'robots' => 'NOINDEX,NOFOLLOW'], $this->page);
+        $this->assertSame(['title' => 'Withdraw consent', 'robots' => 'NOINDEX,NOFOLLOW'], $this->page);
         $this->assertNull($this->path);
     }
 
@@ -82,13 +91,13 @@ class OptoutTest extends TestCase
 
     /** @dataProvider otherBrowsers */
     #[\PHPUnit\Framework\Attributes\DataProvider('otherBrowsers')]
-    public function testSignedLinkWithdrawsButRedirectsWithoutItsOriginalBrowser(
+    public function testConfirmedPostWithdrawsButRedirectsWithoutItsOriginalBrowser(
         string $browserHash,
         ?string $recordHash
     ): void {
         $record = new Consent('cid', 'some_feature', 1, 'source', 'choice', '2020-01-01 00:00:00',
             '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00');
-        $result = $this->controller($record, browserHash: $browserHash, recordHash: $recordHash)->execute();
+        $result = $this->controller($record, 'POST', browserHash: $browserHash, recordHash: $recordHash)->execute();
         $this->assertInstanceOf(Redirect::class, $result);
         $this->assertSame('', $this->path);
         $this->assertSame([], $this->page);
@@ -129,4 +138,34 @@ class OptoutTest extends TestCase
             'short token' => [null, 'forged'], 'oversized token' => [null, str_repeat('b', 65)],
         ];
     }
+    public function testGetFromAnotherBrowserShowsGenericConfirmationWithoutWithdrawal(): void
+    {
+        $record = new Consent('cid', 'feature', 1, 'source', 'choice', '2020-01-01 00:00:00',
+            '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00');
+        $this->assertInstanceOf(Page::class, $this->controller($record, browserHash: 'different')->execute());
+        $this->assertSame('Withdraw consent', $this->page['title']);
+        $this->assertNull($this->path);
+    }
+
+    public function testConfirmedPostInTheOriginalBrowserRendersTheResult(): void
+    {
+        $record = new Consent('cid', 'feature', 1, 'source', 'choice', '2020-01-01 00:00:00',
+            '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00');
+        $this->assertInstanceOf(Page::class, $this->controller($record, 'POST')->execute());
+        $this->assertSame('Consent withdrawn', $this->page['title']);
+    }
+
+    /** @dataProvider invalidFormKeys */
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidFormKeys')]
+    public function testPostRequiresAStringValidFormKey(mixed $key, bool $valid): void
+    {
+        $this->assertInstanceOf(Redirect::class, $this->controller(null, 'POST', key: $key, keyValid: $valid)->execute());
+        $this->assertSame('', $this->path);
+    }
+
+    public static function invalidFormKeys(): array
+    {
+        return ['missing' => [null, true], 'array' => [['key'], true], 'invalid' => ['bad', false]];
+    }
+
 }

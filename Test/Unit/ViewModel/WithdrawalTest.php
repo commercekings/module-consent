@@ -13,7 +13,7 @@ use CommerceKings\Consent\Model\ConfiguredSource;
 use CommerceKings\Consent\Model\ConsentStore;
 use CommerceKings\Consent\Model\WithdrawalLink;
 use CommerceKings\Consent\ViewModel\Withdrawal;
-use Magento\Framework\App\RequestInterface;
+use Magento\Framework\App\Request\Http;
 use PHPUnit\Framework\TestCase;
 
 class WithdrawalTest extends TestCase
@@ -25,10 +25,12 @@ class WithdrawalTest extends TestCase
     private bool $valid = true;
     private string $purpose = 'another_feature';
     private array $lookup = [];
+    private string $method = 'POST';
 
     private function viewModel(): Withdrawal
     {
-        $request = $this->createStub(RequestInterface::class);
+        $request = $this->createStub(Http::class);
+        $request->method('getMethod')->willReturnCallback(fn () => $this->method);
         $request->method('getParam')->willReturnCallback(fn ($key) => ['c' => 'cid', 't' => 'signed'][$key]);
         $links = $this->createStub(WithdrawalLink::class);
         $links->method('getConsent')->willReturnCallback(fn () => $this->valid
@@ -141,5 +143,35 @@ class WithdrawalTest extends TestCase
         $json = $view->getBannerConfigJson();
         $this->assertStringNotContainsString('<', $json);
         $this->assertSame($this->purpose, json_decode($json, true)['*']['CommerceKings_Consent/js/withdrawal-banner']['purpose']);
+    }
+
+    public function testGetNeverSynchronizesPreferencesEvenForAWithdrawnChoice(): void
+    {
+        $this->method = 'GET';
+        $view = $this->viewModel();
+        $this->assertSame('{}', $view->getBannerConfigJson());
+        $this->assertSame([], $this->lookup);
+        $this->assertTrue($view->hasWithdrawnConsent());
+        $this->assertTrue($view->canConfirm());
+    }
+
+    public function testUnwithdrawnLinkRequiresConfirmationAndGetsNoBannerAction(): void
+    {
+        $this->withdrawnAt = null;
+        $this->method = 'GET';
+        $view = $this->viewModel();
+        $this->assertFalse($view->hasWithdrawnConsent());
+        $this->assertTrue($view->canConfirm());
+        $this->assertSame('{}', $view->getBannerConfigJson());
+        $this->assertSame('cid', $view->getConsentId());
+        $this->assertSame('signed', $view->getToken());
+    }
+
+    public function testSuccessfulPostAndLaterGrantDoNotShowAnotherConfirmationForm(): void
+    {
+        $this->assertFalse($this->viewModel()->canConfirm());
+        $this->method = 'GET';
+        $this->current = ['consent_id' => 'new-id', 'withdrawn_at' => null];
+        $this->assertFalse($this->viewModel()->canConfirm());
     }
 }

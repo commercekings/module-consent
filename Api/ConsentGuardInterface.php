@@ -15,6 +15,10 @@ namespace CommerceKings\Consent\Api;
  */
 interface ConsentGuardInterface
 {
-    /** SQL condition: the consent id in $consentIdColumn is valid (same rules as ConsentInterface::isValid()). */
+    /**
+     * SQL condition: the consent id in $consentIdColumn is valid (same rules as ConsentInterface::isValid()).
+     * @param string $consentIdColumn Trusted developer-supplied SQL identifier/expression or a value quoted
+     *     with Magento's database adapter. Never pass raw request input as an SQL expression.
+     */
     public function validCondition(string $consentIdColumn): string;
 }

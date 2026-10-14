@@ -10,14 +10,14 @@ use CommerceKings\Consent\Api\PurposeRegistryInterface;
 use CommerceKings\Consent\Model\ConfiguredSource;
 use CommerceKings\Consent\Model\ConsentStore;
 use CommerceKings\Consent\Model\WithdrawalLink;
-use Magento\Framework\App\RequestInterface;
+use Magento\Framework\App\Request\Http;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 
 /** Purpose-specific confirmation without feature data or changes to another browser's preferences. */
 class Withdrawal implements ArgumentInterface
 {
     public function __construct(
-        private readonly RequestInterface $request,
+        private readonly Http $request,
         private readonly WithdrawalLink $links,
         private readonly PurposeRegistryInterface $purposes,
         private readonly ConsentStore $store,
@@ -36,8 +36,44 @@ class Withdrawal implements ArgumentInterface
         return $consent ? $this->purposes->getLabel($consent->purpose) : '';
     }
 
+    public function hasWithdrawnConsent(): bool
+    {
+        $consent = $this->links->getConsent(
+            (string)$this->request->getParam('c'),
+            (string)$this->request->getParam('t')
+        );
+        return $consent && $consent->withdrawnAt !== null;
+    }
+
+    public function isOriginalBrowser(): bool
+    {
+        $row = $this->store->load((string)$this->request->getParam('c'));
+        $hash = $this->browser->hash();
+        return $row && $hash !== '' && hash_equals((string)$row['browser_hash'], $hash);
+    }
+
+    public function getConsentId(): string
+    {
+        return (string)$this->request->getParam('c');
+    }
+
+    public function getToken(): string
+    {
+        return (string)$this->request->getParam('t');
+    }
+
+    public function canConfirm(): bool
+    {
+        return $this->request->getMethod() === 'GET'
+            && (!$this->hasWithdrawnConsent() || !$this->hasNewerConsent());
+    }
+
     public function getBannerConfigJson(): string
     {
+        // Link scanners may execute JavaScript too. GET must not change banner preferences.
+        if ($this->request->getMethod() !== 'POST') {
+            return '{}';
+        }
         $id = (string)$this->request->getParam('c');
         $consent = $this->links->getConsent($id, (string)$this->request->getParam('t'));
         $current = $consent ? $this->currentChoiceRecord($consent) : null;
