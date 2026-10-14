@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CommerceKings\Consent\Model;
 
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\DB\Sql\Expression;
 
 /**
  * Database side of consents:
@@ -109,7 +110,7 @@ class ConsentStore
         }
         return $this->resource->getConnection()->update(
             $this->table(),
-            ['withdrawn_at' => new \Zend_Db_Expr('NOW()'), 'withdrawn_via' => substr($via, 0, 16)],
+            ['withdrawn_at' => new Expression('NOW()'), 'withdrawn_via' => substr($via, 0, 16)],
             ['consent_id IN (?)' => $consentIds, 'withdrawn_at IS NULL']
         );
     }

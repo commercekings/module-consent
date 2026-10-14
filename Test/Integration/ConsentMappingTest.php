@@ -158,7 +158,8 @@ class ConsentMappingTest extends TestCase
             $config,
             $stores,
             $this->createStub(ManagerInterface::class),
-            $this->createStub(WordingSnapshot::class)
+            $this->createStub(WordingSnapshot::class),
+            new \Magento\Framework\Math\Random()
         );
     }
 }

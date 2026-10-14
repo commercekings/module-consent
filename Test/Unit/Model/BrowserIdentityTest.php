@@ -6,6 +6,7 @@ namespace CommerceKings\Consent\Test\Unit\Model;
 use CommerceKings\Consent\Model\BrowserIdentity;
 use CommerceKings\Consent\Api\SourceConfigInterface;
 use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Math\Random;
 use CommerceKings\Consent\Test\Unit\TestHelperTrait;
 use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
 use Magento\Framework\Stdlib\Cookie\PublicCookieMetadata;
@@ -37,7 +38,7 @@ class BrowserIdentityTest extends TestCase
         $config->method('getCookieLifetimeDays')->willReturn($days);
         $request = $this->createStub(RequestInterface::class);
         $request->method('isSecure')->willReturn($secure);
-        return new BrowserIdentity($manager, $factory, $config, $request);
+        return new BrowserIdentity($manager, $factory, $config, $request, new Random());
     }
 
     public function testNoOrInvalidCookieMeansNoId(): void
@@ -71,6 +72,7 @@ class BrowserIdentityTest extends TestCase
         $identity = $this->identity(null);
         $hash = $identity->ensure();
         [$name, $value] = $this->set[0];
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/D', $value);
         $this->assertSame('ck_consent_browser', $name);
         $this->assertSame(hash('sha256', $value), $hash);
         $this->assertSame(['path' => '/', 'duration' => 90 * 86400, 'secure' => true, 'httpOnly' => true, 'sameSite' => 'Lax'], $this->meta);

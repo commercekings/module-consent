@@ -14,6 +14,7 @@ use CommerceKings\Consent\Model\WordingSnapshot;
 use CommerceKings\Consent\Test\Unit\InMemoryConsentStore;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\Event\ManagerInterface;
+use Magento\Framework\Math\Random;
 use Magento\Store\Api\Data\WebsiteInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -79,7 +80,7 @@ class ConsentServiceTest extends TestCase
         ]);
         $wording = $this->createStub(WordingSnapshot::class);
         $wording->method('currentHash')->willReturnCallback(fn () => $this->wordingHash);
-        return new ConsentService($this->store, $configured, $purposes, $browser, $config, $stores, $events, $wording);
+        return new ConsentService($this->store, $configured, $purposes, $browser, $config, $stores, $events, $wording, new Random());
     }
 
     private function choose(array $purposes, string $time, string $reference = 'cid-1', string $revision = '1'): void

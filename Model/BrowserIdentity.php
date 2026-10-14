@@ -6,6 +6,7 @@ namespace CommerceKings\Consent\Model;
 use CommerceKings\Consent\Api\BrowserIdentityInterface;
 use CommerceKings\Consent\Api\SourceConfigInterface;
 use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Math\Random;
 use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
 use Magento\Framework\Stdlib\CookieManagerInterface;
 
@@ -22,7 +23,8 @@ class BrowserIdentity implements BrowserIdentityInterface
         private readonly CookieManagerInterface $cookieManager,
         private readonly CookieMetadataFactory $cookieMetadataFactory,
         private readonly SourceConfigInterface $config,
-        private readonly RequestInterface $request
+        private readonly RequestInterface $request,
+        private readonly Random $random
     ) {
     }
 
@@ -38,7 +40,7 @@ class BrowserIdentity implements BrowserIdentityInterface
             // Reissue existing identities too: upgrades apply Secure and the current lifetime
             // without breaking links to previously recorded consents.
             $this->created = $this->hash() === ''
-                ? bin2hex(random_bytes(16))
+                ? $this->random->getRandomString(32, '0123456789abcdef')
                 : (string)$this->cookieManager->getCookie(self::COOKIE);
             $this->cookieManager->setPublicCookie(
                 self::COOKIE,

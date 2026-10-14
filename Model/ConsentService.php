@@ -9,6 +9,7 @@ use CommerceKings\Consent\Api\ConsentInterface;
 use CommerceKings\Consent\Api\Data\Consent;
 use CommerceKings\Consent\Api\SourceInterface;
 use Magento\Framework\Event\ManagerInterface;
+use Magento\Framework\Math\Random;
 use Magento\Store\Model\StoreManagerInterface;
 
 /**
@@ -30,7 +31,8 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         private readonly Config $config,
         private readonly StoreManagerInterface $storeManager,
         private readonly ManagerInterface $eventManager,
-        private readonly WordingSnapshot $wording
+        private readonly WordingSnapshot $wording,
+        private readonly Random $random
     ) {
     }
 
@@ -80,7 +82,7 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         if (!$row) {
             // first time this choice is seen: record it (refused after a withdrawal - see ConsentStore::record())
             $this->store->record($key + [
-                'consent_id' => bin2hex(random_bytes(16)),
+                'consent_id' => $this->random->getRandomString(32, '0123456789abcdef'),
                 'banner_revision' => $choice->revision,
                 'terms_revision' => $this->purposes->getTermsRevision($purpose),
                 'expires_at' => min(

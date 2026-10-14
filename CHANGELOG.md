@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Generate browser and consent identifiers with Magento's random generator while retaining 32 lowercase hex characters; use Magento SQL expressions for withdrawal timestamps.
+
 - Generate and verify withdrawal signatures exclusively through Magento's native encryptor, without a legacy raw-key fallback; reject invalid deployment keys or signing failures without reading or withdrawing consent.
 
 - Explain that a newer consent remains active when an already-used email withdrawal link is reopened in its original browser.
