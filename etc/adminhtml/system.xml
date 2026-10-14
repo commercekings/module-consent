@@ -41,6 +41,11 @@
                     <source_model>CommerceKings\Consent\Model\Config\Source\OptionalPurposes</source_model>
                     <can_be_empty>1</can_be_empty>
                 </field>
+                <field id="one_click_unsubscribe" translate="label comment" type="select" sortOrder="875" showInDefault="1" showInWebsite="1">
+                    <label>Enable one-click unsubscribe (RFC 8058)</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Optional; off by default. Adds mail-client unsubscribe headers alongside the regular confirmation link. Your mail provider must DKIM-sign List-Unsubscribe and List-Unsubscribe-Post. Disabling this affects new emails; previously sent links remain usable while their consent record is retained.</comment>
+                </field>
                 <field id="revision" translate="label comment" type="text" sortOrder="880" showInDefault="1" showInWebsite="1">
                     <label>Source revision</label>
                     <comment><![CDATA[The version of the banner's questions the visitors answered. <strong>Raising it asks every visitor again; every consent given before stops counting - for every purpose, also reminders already waiting.</strong> Raise it when the banner's categories, texts or the privacy policy change in a way visitors must agree to again. A package upgrade never changes it.]]></comment>

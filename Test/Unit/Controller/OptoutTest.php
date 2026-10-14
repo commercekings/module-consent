@@ -22,6 +22,7 @@ class OptoutTest extends TestCase
 {
     private array $page = [];
     private ?string $path = null;
+    private ?int $status = null;
 
     private function controller(
         ?Consent $record,
@@ -31,18 +32,34 @@ class OptoutTest extends TestCase
         string $browserHash = 'original',
         ?string $recordHash = 'original',
         mixed $key = 'valid',
-        bool $keyValid = true
+        bool $keyValid = true,
+        ?array $oneClickBody = null,
+        string $contentType = 'application/x-www-form-urlencoded'
     ): Index {
         $request = $this->createStub(Http::class);
         $request->method('getMethod')->willReturn($method);
         $request->method('getParam')->willReturnCallback(fn ($name) => ['c' => $id ?? str_repeat('a', 32), 't' => $token ?? str_repeat('b', 64), 'form_key' => $key][$name]);
+        $request->method('getQuery')->willReturnCallback(fn ($name) => ['c' => $id ?? str_repeat('a', 32), 't' => $token ?? str_repeat('b', 64)][$name] ?? null);
+        $request->method('getPost')->willReturnCallback(fn ($name) => $oneClickBody[$name] ?? null);
+        $request->method('getPostValue')->willReturn($oneClickBody ?? []);
+        $request->method('getHeader')->willReturn($contentType);
+        $machine = $method === 'POST' && isset($oneClickBody['List-Unsubscribe']);
+        $validMachine = $machine && $oneClickBody === ['List-Unsubscribe' => 'One-Click']
+            && in_array(explode(';', $contentType)[0], ['application/x-www-form-urlencoded', 'multipart/form-data'], true)
+            && $id === null && ($token === null || is_string($token));
         $links = $this->createMock(WithdrawalLink::class);
-        $allowed = in_array($method, ['GET', 'POST'], true) && $id === null && $token === null
+        $allowed = !$machine && in_array($method, ['GET', 'POST'], true) && $id === null && $token === null
             && ($method !== 'POST' || (is_string($key) && $keyValid));
-        $links->expects($allowed && $method === 'POST' ? $this->once() : $this->never())->method('withdraw')
-            ->with(str_repeat('a', 32), str_repeat('b', 64))->willReturn($record);
+        $links->expects(($allowed && $method === 'POST') || $validMachine ? $this->once() : $this->never())->method('withdraw')
+            ->with($id ?? str_repeat('a', 32), $token ?? str_repeat('b', 64))->willReturn($record);
         $links->expects($allowed && $method === 'GET' ? $this->once() : $this->never())->method('getConsent')
             ->with(str_repeat('a', 32), str_repeat('b', 64))->willReturn($record);
+        $raw = $this->createStub(\Magento\Framework\Controller\Result\Raw::class);
+        $raw->method('setHttpResponseCode')->willReturnCallback(function ($status) use ($raw) { $this->status = $status; return $raw; });
+        $raw->method('setHeader')->willReturnSelf();
+        $raw->method('setContents')->willReturnSelf();
+        $rawFactory = $this->createMock(\Magento\Framework\Controller\Result\RawFactory::class);
+        $rawFactory->expects($machine ? $this->once() : $this->never())->method('create')->willReturn($raw);
         $validator = $this->createStub(Validator::class);
         $validator->method('validate')->willReturn($keyValid);
         $store = $this->createMock(ConsentStore::class);
@@ -70,7 +87,7 @@ class OptoutTest extends TestCase
         $owner = $browserHash !== '' && $recordHash === $browserHash;
         $showsPage = $allowed && $record && ($owner || ($method === 'GET' && $record->withdrawnAt === null));
         $pageFactory->expects($showsPage ? $this->once() : $this->never())->method('create')->willReturn($page);
-        return new Index($request, $links, $pageFactory, $redirectFactory, $browser, $store, $validator);
+        return new Index($request, $links, $pageFactory, $redirectFactory, $browser, $store, $validator, $rawFactory);
     }
 
     public function testSignedGetShowsConfirmationWithoutWithdrawing(): void
@@ -161,6 +178,34 @@ class OptoutTest extends TestCase
     {
         $this->assertInstanceOf(Redirect::class, $this->controller(null, 'POST', key: $key, keyValid: $valid)->execute());
         $this->assertSame('', $this->path);
+    }
+
+    /** @dataProvider oneClickRequests */
+    #[\PHPUnit\Framework\Attributes\DataProvider('oneClickRequests')]
+    public function testOneClickPostUsesNoBrowserOrRedirectAndLeavesConfirmationSeparate(array $body, mixed $token, string $type, bool $valid): void
+    {
+        $record = $valid ? new Consent('cid', 'feature', 1, 'source', 'choice', '2020-01-01 00:00:00',
+            '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00') : null;
+        $this->assertInstanceOf(\Magento\Framework\Controller\Result\Raw::class,
+            $this->controller($record, 'POST', token: $token, key: null, oneClickBody: $body, contentType: $type)->execute());
+        $this->assertSame($valid ? 200 : 400, $this->status);
+        $this->assertNull($this->path);
+        $this->assertSame([], $this->page);
+    }
+
+    public static function oneClickRequests(): array
+    {
+        $body = ['List-Unsubscribe' => 'One-Click'];
+        $token = str_repeat('b', 64);
+        return [
+            'urlencoded without form key' => [$body, $token, 'application/x-www-form-urlencoded', true],
+            'multipart without form key' => [$body, $token, 'multipart/form-data; boundary=test', true],
+            'invalid signature' => [$body, 'forged', 'application/x-www-form-urlencoded', false],
+            'array token' => [$body, ['token'], 'application/x-www-form-urlencoded', false],
+            'array marker' => [['List-Unsubscribe' => ['One-Click']], $token, 'application/x-www-form-urlencoded', false],
+            'extra body credentials' => [$body + ['c' => 'override'], $token, 'application/x-www-form-urlencoded', false],
+            'json' => [$body, $token, 'application/json', false],
+        ];
     }
 
     public static function invalidFormKeys(): array

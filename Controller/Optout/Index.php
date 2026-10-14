@@ -15,11 +15,15 @@ use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Controller\Result\RedirectFactory;
 use Magento\Framework\View\Result\PageFactory;
 use Magento\Framework\Data\Form\FormKey\Validator;
+use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Controller\Result\RawFactory;
 
-/** GET is read-only; an explicit, form-key POST withdraws. Other browsers return home after confirming. */
+/** GET confirms; browser POST requires a form key; RFC 8058 POST uses the signed URL without browser state. */
 class Index implements HttpGetActionInterface, HttpPostActionInterface, CsrfAwareActionInterface
 {
-    use RejectsMalformedFormKeys;
+    use RejectsMalformedFormKeys {
+        validateForCsrf as private validateBrowserCsrf;
+    }
 
     public function __construct(
         private readonly Http $request,
@@ -28,12 +32,27 @@ class Index implements HttpGetActionInterface, HttpPostActionInterface, CsrfAwar
         private readonly RedirectFactory $redirectFactory,
         private readonly BrowserIdentityInterface $browser,
         private readonly ConsentStore $store,
-        private readonly Validator $formKeyValidator
+        private readonly Validator $formKeyValidator,
+        private readonly RawFactory $rawFactory
     ) {
     }
 
     public function execute(): ResultInterface
     {
+        if ($this->isOneClickRequest($this->request)) {
+            $id = $this->request->getQuery('c');
+            $token = $this->request->getQuery('t');
+            $type = strtolower(trim(explode(';', (string)$this->request->getHeader('Content-Type'))[0]));
+            $valid = in_array($type, ['application/x-www-form-urlencoded', 'multipart/form-data'], true)
+                && $this->request->getPostValue() === ['List-Unsubscribe' => 'One-Click']
+                && is_string($id) && preg_match('/^[a-f0-9]{32}$/D', $id)
+                && is_string($token);
+            $consent = $valid ? $this->links->withdraw($id, $token) : null;
+            return $this->rawFactory->create()->setHttpResponseCode($consent ? 200 : 400)
+                ->setHeader('Content-Type', 'text/plain; charset=UTF-8', true)
+                ->setHeader('Cache-Control', 'no-store', true)
+                ->setContents($consent ? 'OK' : 'Invalid unsubscribe request.');
+        }
         $id = $this->request->getParam('c');
         $token = $this->request->getParam('t');
         $post = $this->request->getMethod() === 'POST';
@@ -63,5 +82,18 @@ class Index implements HttpGetActionInterface, HttpPostActionInterface, CsrfAwar
         $page->getConfig()->setRobots('NOINDEX,NOFOLLOW');
         $page->setHeader('Referrer-Policy', 'no-referrer', true);
         return $page;
+    }
+
+    public function validateForCsrf(RequestInterface $request): ?bool
+    {
+        // The signed URL authorizes machine withdrawal; browser confirmation still requires a form key.
+        return $request instanceof Http && $this->isOneClickRequest($request)
+            ? true : $this->validateBrowserCsrf($request);
+    }
+
+    private function isOneClickRequest(Http $request): bool
+    {
+        return $request->getMethod() === 'POST'
+            && $request->getPost('List-Unsubscribe') !== null;
     }
 }

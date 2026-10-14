@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an optional RFC 8058 Yes/No setting alongside the existing confirmation flow; reuse its signed URL for cookie-free mail-client POSTs.
+
 - Make signed email opt-out GET/HEAD read-only. Require explicit form-key-protected POST confirmation, keep cross-browser withdrawal and later-grant protection, and synchronize banner preferences only in the confirmed POST result.
 
 - Centralize banner and email withdrawals in one atomic core checkpoint with typed, DI-registered module handlers. Persist unfinished actions alongside revocation, run cleanup after commit, and retry failures through native cron and locks without restoring consent or touching later grants. Retain the legacy event as a notification.

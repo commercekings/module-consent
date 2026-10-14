@@ -34,7 +34,7 @@ History policy remains a shop decision; the consent core does not silently repla
 
 Verify no optional collection before any choice or after Reject; affirmative choices record their mapped purposes; withdrawal is acknowledged and invalidates queued work; revision changes prompt again; network failures and rapid changes preserve the latest state. Test the deployed theme and all selected sources.
 
-Email-link GET/HEAD must not withdraw consent or synchronize banner preferences. Confirm through the signed, form-key-protected POST. Test scanner visits, missing/malformed form keys, other-browser confirmation, repeated POST and original-browser application of an existing withdrawal. This is a browser confirmation flow, not RFC 8058 email-client one-click unsubscribe.
+Email-link GET/HEAD must not withdraw consent or synchronize banner preferences. Confirm through the signed, form-key-protected POST. Test scanner visits, missing/malformed form keys, other-browser confirmation, repeated POST and original-browser application of an existing withdrawal. The optional RFC 8058 Yes/No setting adds a cookie-free mail-client POST authorized by the existing signed URL alongside this flow. Verify both unsubscribe headers are covered by DKIM in production; one-click revokes the linked browser consent and does not synchronize banner cookies.
 
 A live audit of a shop's homepage confirmed no Google tracking before acceptance and analytics cookies removed after withdrawal. Extend deployment testing to product, cart, checkout, logged-in and custom-script paths. Test optional integrations individually; the core cannot block scripts that do not consult its purpose API.
 

@@ -7,6 +7,7 @@
                 <revision>1</revision>
                 <cookie_lifetime_days>182</cookie_lifetime_days>
                 <keep_days>183</keep_days>
+                <one_click_unsubscribe>0</one_click_unsubscribe>
             </general>
         </commercekings_consent>
     </default>
