@@ -7,6 +7,7 @@ use CommerceKings\Consent\Api\BrowserIdentityInterface;
 use CommerceKings\Consent\Api\SourceConfigInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Math\Random;
+use Magento\Framework\Session\Config\ConfigInterface as SessionConfigInterface;
 use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
 use Magento\Framework\Stdlib\CookieManagerInterface;
 
@@ -24,7 +25,8 @@ class BrowserIdentity implements BrowserIdentityInterface
         private readonly CookieMetadataFactory $cookieMetadataFactory,
         private readonly SourceConfigInterface $config,
         private readonly RequestInterface $request,
-        private readonly Random $random
+        private readonly Random $random,
+        private readonly SessionConfigInterface $sessionConfig
     ) {
     }
 
@@ -46,7 +48,8 @@ class BrowserIdentity implements BrowserIdentityInterface
                 self::COOKIE,
                 $this->created,
                 $this->cookieMetadataFactory->createPublicCookieMetadata()
-                    ->setPath('/')
+                    ->setPath($this->sessionConfig->getCookiePath())
+                    ->setDomain($this->sessionConfig->getCookieDomain())
                     ->setDuration($this->config->getCookieLifetimeDays() * 86400)
                     ->setSecure($this->request->isSecure())
                     ->setHttpOnly(true)

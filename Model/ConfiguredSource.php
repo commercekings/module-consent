@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CommerceKings\Consent\Model;
 
 use CommerceKings\Consent\Api\SourceInterface;
+use Magento\Framework\Session\Config\ConfigInterface as SessionConfigInterface;
 
 /**
  * The source chosen in admin for a website, out of the SourcePool - null when none is chosen or the
@@ -14,7 +15,8 @@ class ConfiguredSource
     public function __construct(
         private readonly SourcePool $sources,
         private readonly PurposePool $purposes,
-        private readonly Config $config
+        private readonly Config $config,
+        private readonly SessionConfigInterface $sessionConfig
     ) {
     }
 
@@ -36,6 +38,8 @@ class ConfiguredSource
             // the rest are optional purposes the shop does not record: no server calls for them
             'recorded' => $this->config->getRecordedPurposes(),
             'cookieLifetimeDays' => $this->config->getCookieLifetimeDays(),
+            'cookiePath' => $this->sessionConfig->getCookiePath(),
+            'cookieDomain' => $this->sessionConfig->getCookieDomain(),
         ] + $source->getClientConfig();
     }
 }

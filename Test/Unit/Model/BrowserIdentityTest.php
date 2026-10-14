@@ -7,6 +7,7 @@ use CommerceKings\Consent\Model\BrowserIdentity;
 use CommerceKings\Consent\Api\SourceConfigInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Math\Random;
+use Magento\Framework\Session\Config\ConfigInterface as SessionConfigInterface;
 use CommerceKings\Consent\Test\Unit\TestHelperTrait;
 use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
 use Magento\Framework\Stdlib\Cookie\PublicCookieMetadata;
@@ -20,13 +21,14 @@ class BrowserIdentityTest extends TestCase
     private array $set = [];
     private array $meta = [];
 
-    private function identity(mixed $cookie, bool $secure = true, int $days = 90): BrowserIdentity
+    private function identity(mixed $cookie, bool $secure = true, int $days = 90, string $path = '/', string $domain = ''): BrowserIdentity
     {
         $manager = $this->createMock(CookieManagerInterface::class);
         $manager->method('getCookie')->with('ck_consent_browser')->willReturn($cookie);
         $manager->method('setPublicCookie')->willReturnCallback(function ($name, $value) { $this->set[] = [$name, $value]; });
         $metadata = $this->mockWith(PublicCookieMetadata::class, [
             'setPath' => function ($v) use (&$metadata) { $this->meta['path'] = $v; return $metadata; },
+            'setDomain' => function ($v) use (&$metadata) { $this->meta['domain'] = $v; return $metadata; },
             'setDuration' => function ($v) use (&$metadata) { $this->meta['duration'] = $v; return $metadata; },
             'setSecure' => function ($v) use (&$metadata) { $this->meta['secure'] = $v; return $metadata; },
             'setHttpOnly' => function ($v) use (&$metadata) { $this->meta['httpOnly'] = $v; return $metadata; },
@@ -38,7 +40,10 @@ class BrowserIdentityTest extends TestCase
         $config->method('getCookieLifetimeDays')->willReturn($days);
         $request = $this->createStub(RequestInterface::class);
         $request->method('isSecure')->willReturn($secure);
-        return new BrowserIdentity($manager, $factory, $config, $request, new Random());
+        $sessionConfig = $this->createStub(SessionConfigInterface::class);
+        $sessionConfig->method('getCookiePath')->willReturn($path);
+        $sessionConfig->method('getCookieDomain')->willReturn($domain);
+        return new BrowserIdentity($manager, $factory, $config, $request, new Random(), $sessionConfig);
     }
 
     public function testNoOrInvalidCookieMeansNoId(): void
@@ -75,8 +80,18 @@ class BrowserIdentityTest extends TestCase
         $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/D', $value);
         $this->assertSame('ck_consent_browser', $name);
         $this->assertSame(hash('sha256', $value), $hash);
-        $this->assertSame(['path' => '/', 'duration' => 90 * 86400, 'secure' => true, 'httpOnly' => true, 'sameSite' => 'Lax'], $this->meta);
+        $this->assertSame(['path' => '/', 'domain' => '', 'duration' => 90 * 86400, 'secure' => true, 'httpOnly' => true, 'sameSite' => 'Lax'], $this->meta);
         $this->assertSame($hash, $identity->ensure());
         $this->assertCount(1, $this->set);
+    }
+
+    public function testReissuedIdentityUsesConfiguredScopeAndConsentLifetime(): void
+    {
+        $id = str_repeat('ab', 16);
+        $this->identity($id, true, 45, '/shop/', '.example.test')->ensure();
+        $this->assertSame([['ck_consent_browser', $id]], $this->set);
+        $this->assertSame('/shop/', $this->meta['path']);
+        $this->assertSame('.example.test', $this->meta['domain']);
+        $this->assertSame(45 * 86400, $this->meta['duration']);
     }
 }

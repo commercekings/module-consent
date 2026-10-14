@@ -9,6 +9,7 @@ use CommerceKings\Consent\Model\Config\Source\Sources;
 use CommerceKings\Consent\Model\ConfiguredSource;
 use CommerceKings\Consent\Model\PurposePool;
 use CommerceKings\Consent\Model\SourcePool;
+use Magento\Framework\Session\Config\ConfigInterface as SessionConfigInterface;
 use PHPUnit\Framework\TestCase;
 
 class SourcePoolTest extends TestCase
@@ -36,7 +37,10 @@ class SourcePoolTest extends TestCase
         $config->method('getSourceCode')->willReturn($chosen);
         $config->method('getCookieLifetimeDays')->willReturn(90);
         $config->method('getRecordedPurposes')->willReturn(['cart_reminder']);
-        return new ConfiguredSource($pool ?? $this->pool(), new PurposePool(['cart_reminder' => ['label' => 'Cart reminder'], 'newsletter' => []]), $config);
+        $sessionConfig = $this->createStub(SessionConfigInterface::class);
+        $sessionConfig->method('getCookiePath')->willReturn('/shop/');
+        $sessionConfig->method('getCookieDomain')->willReturn('.example.test');
+        return new ConfiguredSource($pool ?? $this->pool(), new PurposePool(['cart_reminder' => ['label' => 'Cart reminder'], 'newsletter' => []]), $config, $sessionConfig);
     }
 
     public function testDropdownOffersNoneAndEveryRegisteredSource(): void
@@ -49,7 +53,7 @@ class SourcePoolTest extends TestCase
     {
         $this->assertSame('other', $this->configured('other')->get()->getCode());
         $this->assertSame(
-            ['source' => 'other', 'adapter' => 'A_C/js/other', 'purposes' => ['cart_reminder', 'newsletter'], 'recorded' => ['cart_reminder'], 'cookieLifetimeDays' => 90, 'cookie' => 'other-cookie'],
+            ['source' => 'other', 'adapter' => 'A_C/js/other', 'purposes' => ['cart_reminder', 'newsletter'], 'recorded' => ['cart_reminder'], 'cookieLifetimeDays' => 90, 'cookiePath' => '/shop/', 'cookieDomain' => '.example.test', 'cookie' => 'other-cookie'],
             $this->configured('other')->getClientConfig()
         );
     }

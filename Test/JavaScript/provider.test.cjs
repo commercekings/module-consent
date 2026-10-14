@@ -15,7 +15,7 @@ function fixture(b = browser({'commercekings-consent-config': {
         change(purpose, value) { choice = true; states[purpose] = value; listeners[purpose](value); }
     };
     const jquery = arg => { if (typeof arg === 'function') arg(); };
-    jquery.mage = {cookies: {get: () => 'form-key'}};
+    jquery.mage = {cookies: {get: () => 'form-key', defaults: {path: '/default-shop/', domain: '.default.test'}}};
     jquery.ajax = request => {
         const pending = pendingRequest(request);
         requests.push(pending);
@@ -112,6 +112,29 @@ test('rapid changes discard obsolete queued grants and keep the newest explicit 
     assert.ok(f.requests[2].request.url.endsWith('/grant'));
     f.requests[2].complete();
     assert.deepEqual(f.callbacks, [false, true]);
+});
+
+test('withdrawal hints use the configured consent lifetime and Magento cookie scope', () => {
+    const f = fixture(browser({'commercekings-consent-config': {
+        purposes: ['analytics'], cookieLifetimeDays: 45, cookiePath: '/shop/', cookieDomain: '.example.test'
+    }}));
+    f.adapter.change('analytics', false);
+    assert.match(f.b.writes.at(-1), /; path=\/shop\/; domain=\.example\.test; SameSite=Lax; max-age=3888000; Secure$/);
+});
+
+test('older cached configuration inherits Magento cookie defaults without a hardcoded lifetime', () => {
+    const f = fixture(browser({'commercekings-consent-config': {purposes: ['analytics']}}));
+    f.adapter.change('analytics', false);
+    assert.match(f.b.writes.at(-1), /; path=\/default-shop\/; domain=\.default\.test; SameSite=Lax; Secure$/);
+    assert.doesNotMatch(f.b.writes.at(-1), /max-age|expires/i);
+});
+
+test('invalid hint lifetime creates a session hint and HTTP does not set Secure', () => {
+    const b = browser({'commercekings-consent-config': {purposes: ['analytics'], cookieLifetimeDays: 'invalid'}});
+    b.context.location.protocol = 'http:';
+    const f = fixture(b);
+    f.adapter.change('analytics', false);
+    assert.doesNotMatch(f.b.writes.at(-1), /max-age|expires|Secure/i);
 });
 
 function unrecorded() {

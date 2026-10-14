@@ -45,14 +45,19 @@ define(['jquery', 'CommerceKings_Consent/js/consent/adapter!', 'mage/cookies'], 
     function remember(purpose, pending) {
         var seen = readSeen(),
             secure = location.protocol === 'https:' ? '; Secure' : '',
-            days = Math.max(1, Number(config().cookieLifetimeDays) || 182);
+            defaults = $.mage.cookies.defaults,
+            path = config().cookiePath || defaults.path,
+            domain = config().cookieDomain || defaults.domain,
+            days = Number(config().cookieLifetimeDays),
+            lifetime = Number.isFinite(days) && days > 0 ? '; max-age=' + days * 86400 : '';
         if (pending) {
             Object.defineProperty(seen, purpose, {value: 1, enumerable: true, configurable: true});
         } else {
             delete seen[purpose];
         }
         document.cookie = SEEN + '=' + encodeURIComponent(JSON.stringify(seen))
-            + '; path=/; SameSite=Lax; max-age=' + days * 86400 + secure;
+            + (path ? '; path=' + path : '') + (domain ? '; domain=' + domain : '')
+            + '; SameSite=Lax' + lifetime + secure;
     }
 
     /** Missing list (page cached before the setting existed): everything is recorded. */
