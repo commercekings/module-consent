@@ -14,7 +14,7 @@ use Magento\Store\Model\App\Emulation;
 use Magento\Store\Api\Data\StoreInterface;
 
 /**
- * Per store view: has the wording (banner texts, categories, purposes, privacy page) changed since the
+ * Per store view: has the wording (source texts, categories, purposes, privacy page) changed since the
  * visitors of the current source revision first answered it? A changed wording does not ask anyone
  * again - only raising the source revision does; this tells the admin when that decision is due.
  */
@@ -72,7 +72,7 @@ class WordingCheck extends Field
         }
         return '<strong>' . $this->escapeHtml(__('Changed since revision %1 (%2).', $revision, $first['created_at']))
             . '</strong><br/>' . $this->escapeHtml(__(
-                'Increase the banner revision if visitors need to accept these changes.'
+                'Increase the source revision if visitors need to accept these changes.'
             ));
     }
 

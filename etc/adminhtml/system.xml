@@ -9,65 +9,105 @@
             <tab>commercekings</tab>
             <resource>CommerceKings_Consent::config</resource>
             <group id="general" translate="label comment" sortOrder="10" showInDefault="1" showInWebsite="1">
-                <label>Consent</label>
-                <comment>Choose a cookie banner and manage consent records. Clear the full-page cache after changes.</comment>
+                <label>Source</label>
+                <comment>Clear the full-page cache after changing these settings.</comment>
                 <field id="source" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1">
-                    <label>Cookie banner</label>
-                    <comment>None disables the banner and consent. Changing banners invalidates earlier consent.</comment>
+                    <label>Source</label>
+                    <comment>None disables consent. Changing the source invalidates earlier consent.</comment>
                     <source_model>CommerceKings\Consent\Model\Config\Source\Sources</source_model>
                 </field>
-                <field id="privacy_url" translate="label comment" type="text" sortOrder="11" showInDefault="1" showInWebsite="1">
-                    <label>Privacy policy page</label>
-                    <comment>Page URL key or full URL. Linked from the banner.</comment>
-                </field>
-                <field id="source_version" translate="label comment" sortOrder="12" showInDefault="1" showInWebsite="1">
-                    <label>Banner version</label>
-                    <comment>Version supplied by the selected banner.</comment>
+                <field id="source_version" translate="label comment" sortOrder="20" showInDefault="1" showInWebsite="1">
+                    <label>Source version</label>
+                    <comment>Version supplied by the selected source.</comment>
                     <frontend_model>CommerceKings\Consent\Block\Adminhtml\SourceInfo</frontend_model>
-                </field>
-                <field id="cookie_name" translate="label comment" type="text" sortOrder="13" showInDefault="1" showInWebsite="1">
-                    <label>Consent cookie name</label>
-                    <comment>Changing the name asks visitors for consent again.</comment>
-                    <validate>required-entry validate-code</validate>
-                </field>
-                <field id="source_categories" translate="label comment" sortOrder="16" showInDefault="1" showInWebsite="1">
-                    <label>Banner categories</label>
-                    <comment>Visitor choices, linked purposes and cookies cleared on withdrawal.</comment>
-                    <frontend_model>CommerceKings\Consent\Block\Adminhtml\SourceInfo</frontend_model>
-                </field>
-                <field id="record_purposes" translate="label comment" type="CommerceKings\Consent\Block\Adminhtml\Form\Element\RecordPurposes" sortOrder="17" showInDefault="1" showInWebsite="1" canRestore="1">
-                    <label>Record consent for</label>
-                    <comment>Required purposes are always recorded. Select other purposes to save consent evidence.</comment>
-                    <source_model>CommerceKings\Consent\Model\Config\Source\RecordPurposes</source_model>
-                    <can_be_empty>1</can_be_empty>
                     <depends>
                         <field id="source" negative="1"/>
                     </depends>
                 </field>
-                <field id="one_click_unsubscribe" translate="label comment" type="select" sortOrder="875" showInDefault="1" showInWebsite="1">
-                    <label>One-click unsubscribe</label>
-                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>Adds an unsubscribe option in supported email apps. Requires DKIM signing by your mail provider.</comment>
+                <field id="source_categories" translate="label comment" sortOrder="30" showInDefault="1" showInWebsite="1">
+                    <label>Source categories</label>
+                    <comment>Visitor choices, linked purposes and cookies cleared on withdrawal.</comment>
+                    <frontend_model>CommerceKings\Consent\Block\Adminhtml\SourceInfo</frontend_model>
+                    <depends>
+                        <field id="source" negative="1"/>
+                    </depends>
                 </field>
-                <field id="revision" translate="label comment" type="text" sortOrder="880" showInDefault="1" showInWebsite="1">
-                    <label>Banner revision</label>
+                <field id="revision" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="1">
+                    <label>Source revision</label>
                     <comment>Increase to ask all visitors again and invalidate earlier consent.</comment>
                     <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                    <depends>
+                        <field id="source" negative="1"/>
+                    </depends>
                 </field>
-                <field id="wording_check" translate="label comment" sortOrder="885" showInDefault="1" showInWebsite="1">
-                    <label>Banner text status</label>
+                <field id="wording_check" translate="label comment" sortOrder="50" showInDefault="1" showInWebsite="1">
+                    <label>Source text status</label>
                     <comment>Shows text changes since this revision was first accepted.</comment>
                     <frontend_model>CommerceKings\Consent\Block\Adminhtml\WordingCheck</frontend_model>
+                    <depends>
+                        <field id="source" negative="1"/>
+                    </depends>
                 </field>
-                <field id="cookie_lifetime_days" translate="label comment" type="text" sortOrder="890" showInDefault="1" showInWebsite="1">
+                <field id="cookie_name" translate="label comment" type="text" sortOrder="60" showInDefault="1" showInWebsite="1">
+                    <label>Consent cookie name</label>
+                    <comment>Changing the name asks visitors for consent again.</comment>
+                    <validate>required-entry validate-code</validate>
+                    <depends>
+                        <field id="source" negative="1"/>
+                    </depends>
+                </field>
+                <field id="cookie_lifetime_days" translate="label comment" type="text" sortOrder="70" showInDefault="1" showInWebsite="1">
                     <label>Consent lifetime (days)</label>
                     <comment>Maximum age of a saved choice. Reducing this also shortens existing consent.</comment>
                     <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                    <depends>
+                        <field id="source" negative="1"/>
+                    </depends>
                 </field>
-                <field id="keep_days" translate="label comment" type="text" sortOrder="900" showInDefault="1">
+            </group>
+            <group id="records" translate="label comment" sortOrder="20" showInDefault="1" showInWebsite="1">
+                <label>Records</label>
+                <frontend_model>CommerceKings\Consent\Block\Adminhtml\DependentFieldset</frontend_model>
+                <depends>
+                    <field id="commercekings_consent/general/source" negative="1"/>
+                </depends>
+                <field id="record_purposes" translate="label comment" type="CommerceKings\Consent\Block\Adminhtml\Form\Element\RecordPurposes" sortOrder="10" showInDefault="1" showInWebsite="1" canRestore="1">
+                    <label>Record consent for</label>
+                    <comment>Required purposes are always recorded. Select other purposes to save consent evidence.</comment>
+                    <source_model>CommerceKings\Consent\Model\Config\Source\RecordPurposes</source_model>
+                    <can_be_empty>1</can_be_empty>
+                    <config_path>commercekings_consent/general/record_purposes</config_path>
+                </field>
+                <field id="keep_days" translate="label comment" type="text" sortOrder="20" showInDefault="1">
                     <label>Record retention (days)</label>
                     <comment>Days to keep evidence after expiry or withdrawal. Withdrawal markers may be kept longer.</comment>
                     <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                    <config_path>commercekings_consent/general/keep_days</config_path>
+                </field>
+            </group>
+            <group id="withdrawal" translate="label comment" sortOrder="30" showInDefault="1" showInWebsite="1">
+                <label>Withdrawal</label>
+                <frontend_model>CommerceKings\Consent\Block\Adminhtml\DependentFieldset</frontend_model>
+                <depends>
+                    <field id="commercekings_consent/general/source" negative="1"/>
+                </depends>
+                <field id="one_click_unsubscribe" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1">
+                    <label>One-click unsubscribe</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment><![CDATA[Adds an unsubscribe option in supported email apps. Requires DKIM signing by your mail provider. See <a href="https://www.rfc-editor.org/rfc/rfc8058" target="_blank" rel="noopener noreferrer">RFC 8058</a>.]]></comment>
+                    <config_path>commercekings_consent/general/one_click_unsubscribe</config_path>
+                </field>
+            </group>
+            <group id="privacy" translate="label comment" sortOrder="40" showInDefault="1" showInWebsite="1">
+                <label>Privacy</label>
+                <frontend_model>CommerceKings\Consent\Block\Adminhtml\DependentFieldset</frontend_model>
+                <depends>
+                    <field id="commercekings_consent/general/source" negative="1"/>
+                </depends>
+                <field id="privacy_url" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1">
+                    <label>Privacy policy page</label>
+                    <comment>Page URL key or full URL. Linked from the source.</comment>
+                    <config_path>commercekings_consent/general/privacy_url</config_path>
                 </field>
             </group>
         </section>
