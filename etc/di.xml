@@ -4,6 +4,7 @@
     <preference for="CommerceKings\Consent\Api\WithdrawalLinkInterface" type="CommerceKings\Consent\Model\WithdrawalLink"/>
     <preference for="CommerceKings\Consent\Api\ConsentGuardInterface" type="CommerceKings\Consent\Model\ConsentService"/>
     <preference for="CommerceKings\Consent\Api\BrowserIdentityInterface" type="CommerceKings\Consent\Model\BrowserIdentity"/>
+    <preference for="CommerceKings\Consent\Api\ConsentOwnershipInterface" type="CommerceKings\Consent\Model\ConsentOwnership"/>
     <preference for="CommerceKings\Consent\Api\PurposeRegistryInterface" type="CommerceKings\Consent\Model\PurposePool"/>
     <preference for="CommerceKings\Consent\Api\SourceConfigInterface" type="CommerceKings\Consent\Model\Config"/>
     <preference for="CommerceKings\Consent\Api\BannerSettingsInterface" type="CommerceKings\Consent\Model\Config"/>

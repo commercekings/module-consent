@@ -37,9 +37,12 @@ CommerceKings_ConsentVanilla   CommerceKings_Notification
 
 ## For features
 
-Email notifications: use `commercekings/module-notification`. Its subscriptions do steps 2, 3 and 5 below for
-you (consent at subscribe time, the guarded write, withdrawal cleanup); the feature declares its purpose (step 1)
-and checks consent in its own send claim (step 4).
+Email notifications: use `commercekings/module-notification` with `commercekings/module-consent-notification`.
+Its subscriptions do steps 2, 3 and 5 below for you (consent at subscribe time, the guarded write, withdrawal
+cleanup); the feature declares its purpose (step 1) and checks the permission in its own send claim (step 4).
+
+Before handing a visitor something the consenting visitor owns (e.g. a saved cart), ask
+`Api\ConsentOwnershipInterface::isCurrentVisitor($consentId)`: true only in the browser the consent was given in.
 
 1. **Declare the purpose** (your `di.xml`):
    ```xml

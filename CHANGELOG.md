@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `Api\ConsentOwnershipInterface::isCurrentVisitor($consentId)`: whether a consent was given in the current
+  browser, for features that hand back something the consenting visitor owns.
 - Exercise withdrawal lock contention, cleanup completion/retry storage failures, grant persistence failures and CLI/export rejection paths with dedicated failure tests.
 - Use CommerceKings_Core for the shared admin tab, crown icon and corporate-site footer.
 - Group admin settings into Source, Records and Privacy; simplify wording, show required recording purposes as locked selections, and hide other sections when no source is selected.
