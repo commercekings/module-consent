@@ -40,16 +40,6 @@ class ConfigTest extends TestCase
         $this->assertSame(1, $this->config([])->getKeepDays());
     }
 
-    public function testOneClickFlagUsesNativeStoreScopeAndIsOffByDefault(): void
-    {
-        $scope = $this->createMock(ScopeConfigInterface::class);
-        $scope->expects($this->exactly(2))->method('isSetFlag')
-            ->with('commercekings_consent/general/one_click_unsubscribe', 'store')->willReturnOnConsecutiveCalls(false, true);
-        $config = new Config($scope, $this->createStub(UrlInterface::class), new PurposePool());
-        $this->assertFalse($config->isOneClickUnsubscribeEnabled());
-        $this->assertTrue($config->isOneClickUnsubscribeEnabled());
-    }
-
     public function testWebsiteScopeWhenAWebsiteIsGiven(): void
     {
         $config = $this->config([]);

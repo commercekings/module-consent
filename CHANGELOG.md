@@ -4,9 +4,9 @@
 
 - Exercise withdrawal lock contention, cleanup completion/retry storage failures, grant persistence failures and CLI/export rejection paths with dedicated failure tests.
 - Use CommerceKings_Core for the shared admin tab, crown icon and corporate-site footer.
-- Group admin settings into Source, Records, Withdrawal and Privacy; simplify wording, show required recording purposes as locked selections, and hide other sections when no source is selected. Link one-click unsubscribe help to RFC 8058.
+- Group admin settings into Source, Records and Privacy; simplify wording, show required recording purposes as locked selections, and hide other sections when no source is selected.
 
-- Add an optional RFC 8058 Yes/No setting alongside the existing confirmation flow; reuse its signed URL for cookie-free mail-client POSTs.
+- Accept RFC 8058 one-click POSTs on the signed opt-out URL (cookie-free, alongside the confirmation flow). The setting that adds the email headers lives in CommerceKings_Notification.
 
 - Make signed email opt-out GET/HEAD read-only. Require explicit form-key-protected POST confirmation, keep cross-browser withdrawal and later-grant protection, and synchronize banner preferences only in the confirmed POST result.
 

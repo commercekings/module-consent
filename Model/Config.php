@@ -57,11 +57,6 @@ class Config implements SourceConfigInterface, BannerSettingsInterface
         return trim((string)$this->value('source', $websiteId));
     }
 
-    public function isOneClickUnsubscribeEnabled(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::PREFIX . 'one_click_unsubscribe', ScopeInterface::SCOPE_STORE);
-    }
-
     public function getCookieName(?int $websiteId = null): string
     {
         return (string)preg_replace('/[^a-z0-9_-]/i', '', (string)$this->value('cookie_name', $websiteId)) ?: 'cc_cookie';
