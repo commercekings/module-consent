@@ -58,7 +58,7 @@
                 </field>
                 <field id="cookie_lifetime_days" translate="label comment" type="text" sortOrder="70" showInDefault="1" showInWebsite="1">
                     <label>Consent lifetime (days)</label>
-                    <comment>Maximum age of a saved choice. Reducing this also shortens existing consent.</comment>
+                    <comment>Lowering limits consent; raising never extends its original expiry.</comment>
                     <validate>required-entry validate-digits validate-greater-than-zero</validate>
                     <depends>
                         <field id="source" negative="1"/>
@@ -73,7 +73,7 @@
                 </depends>
                 <field id="record_purposes" translate="label comment" type="CommerceKings\Consent\Block\Adminhtml\Form\Element\RecordPurposes" sortOrder="10" showInDefault="1" showInWebsite="1" canRestore="1">
                     <label>Record consent for</label>
-                    <comment>Required purposes are always recorded. Select other purposes to save consent evidence.</comment>
+                    <comment>Stores consent time and wording as evidence. Required purposes are always recorded.</comment>
                     <source_model>CommerceKings\Consent\Model\Config\Source\RecordPurposes</source_model>
                     <can_be_empty>1</can_be_empty>
                     <config_path>commercekings_consent/general/record_purposes</config_path>
