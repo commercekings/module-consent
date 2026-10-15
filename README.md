@@ -6,7 +6,7 @@ Install in a Magento project with `composer require commercekings/module-consent
 release is published. Then enable its modules:
 
 ```sh
-bin/magento module:enable CommerceKings_Consent
+bin/magento module:enable CommerceKings_Core CommerceKings_Consent
 bin/magento setup:upgrade
 bin/magento cache:clean
 ```
@@ -18,7 +18,7 @@ See [compatibility and verification](COMPATIBILITY.md) and [changes](CHANGELOG.m
 Consent records for Magento 2: "may we do **purpose X** for this visitor?", answered from a recorded, server-side consent that can be checked later, withdrawn reliably and shown as evidence. No dependency on any banner or feature module: **sources** (cookie banners, …) report the visitor's choice, **features** (e.g. the abandoned cart reminder) ask and store the consent id with their data.
 
 ```
-             CommerceKings_Consent   (depends on nothing of ours)
+             CommerceKings_Consent   (shared admin branding: CommerceKings_Core)
               ▲                  ▲
    registers a source      uses the API, declares a purpose
 CommerceKings_ConsentVanilla   CommerceKings_AbandonedCart
@@ -132,6 +132,8 @@ blank or non-string deployment key prevents link generation and signature valida
 
 ## Admin
 **Stores > Configuration > CommerceKings > Consent** (default / website), grouped as **Source**, **Records**, **Withdrawal** and **Privacy**. The privacy policy field is last. Only the **Source** selector remains visible when set to **None**. Editable: *Source* (None or a registered source – its banner is the one shown; changing it invalidates every consent of the old one), *Privacy policy page* (every banner links it – `Api\BannerSettingsInterface`), **Consent cookie name** (the cookie the banner keeps the visitor's choice in; changing it asks everyone again), **Source revision** (raising it asks every visitor again – the shop's decision, so a package upgrade never changes it) and **Consent lifetime (days)** (default 182; it also caps server permission from the saved choice time; a source may expire it sooner), *Record retention (days)* (default 183). **Record consent for** (website; required purposes are selected and locked, optional purposes start unselected – see `record`; selecting an optional purpose records future choices. The field is hidden when no source is selected). **Read-only** – defined in code, shown for review: *Source version*, *Source categories* (with the purposes each grants and the cookies deleted when off). Flush the full page cache after a change.
+
+CommerceKings_Core provides the shared admin tab, crown icon and Developed by **CommerceKings** footer linking to `https://commercekings.net` in a new tab.
 
 ## Adding a source
 The adapter defines its library, cookie readers and registration in **code**. Select the source in admin or site `etc/config.xml`. `CommerceKings_ConsentDefaults` supplies a shared preset when a source has no explicit categories; it is optional for this core package and required by `CommerceKings_ConsentVanilla`. A site module can replace the preset with complete categories, descriptions and purpose mappings in `di.xml`. The core alone supplies no categories and grants no purpose without a configured source and mapping.

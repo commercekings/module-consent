@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Use CommerceKings_Core for the shared admin tab, crown icon and corporate-site footer.
 - Group admin settings into Source, Records, Withdrawal and Privacy; simplify wording, show required recording purposes as locked selections, and hide other sections when no source is selected. Link one-click unsubscribe help to RFC 8058.
 
 - Add an optional RFC 8058 Yes/No setting alongside the existing confirmation flow; reuse its signed URL for cookie-free mail-client POSTs.

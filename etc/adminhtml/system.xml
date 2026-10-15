@@ -1,9 +1,6 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
     <system>
-        <tab id="commercekings" translate="label" sortOrder="900" class="commercekings-tab">
-            <label>CommerceKings</label>
-        </tab>
         <section id="commercekings_consent" translate="label" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
             <label>Consent</label>
             <tab>commercekings</tab>
