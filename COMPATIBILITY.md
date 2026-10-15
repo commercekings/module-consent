@@ -1,12 +1,13 @@
 # Compatibility and verification
 
+The first-release runtime target is Magento Open Source 2.4.9 with PHP 8.5 and Luma.
 The Composer PHP range is a dependency constraint, not a claim that every Magento/PHP
 combination has passed runtime testing.
 
 | Magento Open Source | PHP | Runtime verification |
 | --- | --- | --- |
 | 2.4.9 | 8.5 | Passed locally: Composer, PHP lint, DI compilation and package unit tests |
-| Older supported releases | 8.1–8.4 | Pending; use a matching Magento dependency set and services |
+| Other Magento releases | 8.1–8.4 | Unverified; use a matching Magento dependency set and services |
 
 The five-package sandbox also checks consent mapping and atomic withdrawal/cleanup retries against temporary database tables,
 the JavaScript lifecycle, and native Vanilla consent choices, add-to-cart and checkout in
