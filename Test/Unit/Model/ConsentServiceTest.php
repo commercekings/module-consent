@@ -277,9 +277,9 @@ class ConsentServiceTest extends TestCase
         $this->store = $this->createStub(InMemoryConsentStore::class);
         $this->store->method('connection')->willReturn($db);
         $this->store->method('tableName')->willReturn('ck_consent');
-        $sql = $this->service()->validCondition('q.ck_abandoned_consent_id');
+        $sql = $this->service()->validCondition('c.consent_id');
         $this->assertSame(
-            "EXISTS (SELECT 1 FROM `ck_consent` ckc WHERE ckc.consent_id = q.ck_abandoned_consent_id AND ckc.withdrawn_at IS NULL"
+            "EXISTS (SELECT 1 FROM `ck_consent` ckc WHERE ckc.consent_id = c.consent_id AND ckc.withdrawn_at IS NULL"
             . " AND ckc.expires_at > NOW() AND ((ckc.website_id = 1 AND ckc.source = 'banner' AND ckc.banner_revision = '1'"
             . " AND LEAST(ckc.source_time, ckc.granted_at) > NOW() - INTERVAL 182 DAY AND ((ckc.purpose = 'cart_reminder' AND ckc.terms_revision = '1') OR (ckc.purpose = 'analytics' AND ckc.terms_revision = '1')))))",
             $sql
