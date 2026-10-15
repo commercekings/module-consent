@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Simplify admin wording, show required recording purposes as locked selections, and hide recording choices when no banner is selected.
+
 - Add an optional RFC 8058 Yes/No setting alongside the existing confirmation flow; reuse its signed URL for cookie-free mail-client POSTs.
 
 - Make signed email opt-out GET/HEAD read-only. Require explicit form-key-protected POST confirmation, keep cross-browser withdrawal and later-grant protection, and synchronize banner preferences only in the confirmed POST result.

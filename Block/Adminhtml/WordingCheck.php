@@ -59,7 +59,7 @@ class WordingCheck extends Field
         $revision = $this->config->getRevision($websiteId);
         $first = $this->consents->firstSnapshot($storeId, $revision);
         if (!$first) {
-            return $this->escapeHtml(__('No consent recorded for revision %1 yet.', $revision));
+            return $this->escapeHtml(__('No records for revision %1.', $revision));
         }
         $this->emulation->startEnvironmentEmulation($storeId, Area::AREA_FRONTEND, true);
         try {
@@ -68,11 +68,11 @@ class WordingCheck extends Field
             $this->emulation->stopEnvironmentEmulation();
         }
         if ($current === $first['snapshot_hash']) {
-            return $this->escapeHtml(__('Unchanged since visitors first answered revision %1 (%2).', $revision, $first['created_at']));
+            return $this->escapeHtml(__('Unchanged since revision %1 (%2).', $revision, $first['created_at']));
         }
-        return '<strong>' . $this->escapeHtml(__('Changed since visitors first answered revision %1 (%2).', $revision, $first['created_at']))
+        return '<strong>' . $this->escapeHtml(__('Changed since revision %1 (%2).', $revision, $first['created_at']))
             . '</strong><br/>' . $this->escapeHtml(__(
-                'Consents keep pointing to the wording they were given under. Raise the source revision if visitors must agree to the new wording.'
+                'Increase the banner revision if visitors need to accept these changes.'
             ));
     }
 

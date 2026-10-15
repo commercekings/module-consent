@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CommerceKings\Consent\Test\Unit\Model;
 
-use CommerceKings\Consent\Model\Config\Source\OptionalPurposes;
+use CommerceKings\Consent\Model\Config\Source\RecordPurposes;
 use CommerceKings\Consent\Model\PurposePool;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use PHPUnit\Framework\TestCase;
@@ -39,10 +39,12 @@ class PurposePoolTest extends TestCase
         $this->assertSame(['cart_reminder', 'analytics', 'marketing'], $this->pool()->getCodes());
     }
 
-    public function testAdminListsEveryOptionalPurposeEvenWhenInactive(): void
+    public function testAdminListsRequiredAndOptionalPurposesEvenWhenInactive(): void
     {
         $this->assertSame(['cart_reminder', 'analytics', 'marketing'], $this->pool()->getAllCodes());
-        $this->assertSame(['analytics', 'marketing'], array_column((new OptionalPurposes($this->pool()))->toOptionArray(), 'value'));
+        $options = (new RecordPurposes($this->pool()))->toOptionArray();
+        $this->assertSame(['cart_reminder', 'analytics', 'marketing'], array_column($options, 'value'));
+        $this->assertSame([true, false, false], array_column($options, 'required'));
     }
 
     public function testWithoutConfigEverythingIsActive(): void

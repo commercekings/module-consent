@@ -39,7 +39,7 @@ class SourceInfo extends Field
         // admin CSS sets font-size: 0 on a value cell with a tooltip (it expects an input) - set the text size
         $style = ' style="font-size:1.4rem"';
         $html = '<div class="ck-source-info" data-source=""' . $style . '>'
-            . $this->value((string)__('No source chosen'))
+            . $this->value((string)__('No banner selected'))
             . '</div>';
         foreach (array_keys($this->sources->getLabels()) as $code) {
             $source = $this->sources->getProvider((string)$code);
@@ -90,7 +90,7 @@ class SourceInfo extends Field
                 $this->escapeHtml(implode(', ', array_unique($cookies))) ?: '&mdash;',
             ];
         }
-        return $this->grid([__('Source category'), __('Always on'), __('Purposes'), __('Cookies deleted when off')], $rows);
+        return $this->grid([__('Category'), __('Always on'), __('Purposes'), __('Cookies cleared')], $rows);
     }
 
     /** required (always recorded) / recorded / not recorded (Record consent for) */
