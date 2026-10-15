@@ -20,8 +20,11 @@ Consent records for Magento 2: "may we do **purpose X** for this visitor?", answ
 ```
              CommerceKings_Consent   (shared admin branding: CommerceKings_Core)
               ▲                  ▲
-   registers a source      uses the API, declares a purpose
-CommerceKings_ConsentVanilla   CommerceKings_AbandonedCart
+   registers a source      uses the API (subscriptions, withdrawal cleanup)
+CommerceKings_ConsentVanilla   CommerceKings_Notification
+                                 ▲
+            registers a subscription type (its purpose is declared here, in Consent)
+                               CommerceKings_AbandonedCart
 ```
 
 ## The model
@@ -33,6 +36,10 @@ CommerceKings_ConsentVanilla   CommerceKings_AbandonedCart
 - **Renewal needs an explicit choice.** A choice seen for the first time is recorded when a feature asks – unless this browser withdrew that series before; then only switching the purpose on again in the source counts (`/ckconsent/grant`). Bundled sources may confirm all purposes on an explicit Save or Accept all; loading a saved choice never renews permission. A missing cookie never creates a consent.
 
 ## For features
+
+Email notifications: use `commercekings/module-notification`. Its subscriptions do steps 2, 3 and 5 below for
+you (consent at subscribe time, the guarded write, withdrawal cleanup); the feature declares its purpose (step 1)
+and checks consent in its own send claim (step 4).
 
 1. **Declare the purpose** (your `di.xml`):
    ```xml
