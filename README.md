@@ -164,7 +164,26 @@ Every recorded consent stores `snapshot_hash`: the sha256 of the wording current
 
 ## Configuration evidence and shop disclosures
 
-Run `bin/magento consent:config:export --store=<store-view-code> --policy-file=<local-published-policy-copy>` and redirect stdout to an archival JSON file. Run once for every store view and every source revision before release. The export includes translated category wording, exact purpose mappings and terms revisions, banner configuration, source version, retention settings, and a copy and SHA-256 of the supplied policy. Omitting the policy file leaves policy evidence explicitly absent; a URL alone cannot preserve historical text.
+### Admin export
+
+Open **System > Data Transfer > Export** and choose **Consent records** or **Consent configuration**, then **CSV**. Use Magento's filters and Continue button; download the file from the export list when processing finishes. Access uses the existing **System > Data Transfer > Export** role permission, which allows exporting across websites. Exported consent records include pseudonymous browser hashes; restrict access and keep downloads only as long as needed.
+
+- **Consent records** exports recorded choices, including expired and withdrawn records still within retention. Filter by consent ID, purpose, browser hash, website ID, source, revisions or dates. Date filters cover whole UTC days using the admin's date format. Each row includes the original `wording_json`, its `snapshot_hash`, `wording_first_seen`, `wording_hash_matches` (1/0), and `evidence_json` containing the same proof as `consent:evidence:show`. Missing historical wording stays absent; current wording never substitutes for it. No records exist for choices made without recording enabled.
+- **Consent configuration** exports one row per storefront store view, including inactive views and excluding the admin store. Filter by store view ID, code or website ID. Each view uses its own locale and settings. `configuration_json` contains the full configuration evidence, including categories, purposes, source wording, retention and the configured CMS policy text when available. It describes the configuration at processing time.
+
+The **Exclude** checkboxes remove optional display columns; consent ID, store identity and structured evidence columns remain present. Full JSON evidence retains the original values even when their display columns are excluded. Cells that could execute as spreadsheet formulas are prefixed with an apostrophe; the JSON evidence and original wording remain unchanged. CSV rows are fetched in pages through Magento's collection iterator.
+
+Exports use Magento's standard `import_export.export` queue and **exportProcessor** consumer, with the site's configured queue transport. If consumers do not run automatically:
+
+```sh
+bin/magento queue:consumers:start exportProcessor --max-messages=1
+```
+
+Files use Magento's normal export storage and download lifecycle; they are not a permanent archive. Preserve reviewed exports outside Magento's temporary storage.
+
+### CLI export
+
+The existing JSON commands remain available. Run `bin/magento consent:config:export --store=<store-view-code>` and redirect stdout to an archival JSON file. Run once for every store view and every source revision before release. The export includes translated category wording, exact purpose mappings and terms revisions, source configuration, version and retention settings. The configured Magento CMS privacy page (URL key) is included automatically when available. For an external policy, pass `--policy-file=<local-published-policy-copy>` to include its exact text and SHA-256; this also overrides the configured CMS copy. External URLs are never fetched. Without an available copy, policy evidence stays explicitly absent; a URL alone cannot preserve historical text.
 
 Keep each export with the deployed commit, `composer.lock`, theme/translation files, a banner screenshot and the published policy. Store archives durably outside `var/` and restrict access to visitor consent records separately. Changes that need renewed agreement require a new source revision and, where appropriate, purpose terms revision. Exports are release-time configuration evidence; per-consent wording is kept automatically (above). Existing consent records reference their banner and terms revisions. Do not overwrite historical exports.
 
@@ -191,5 +210,8 @@ Run the mapping regression against a local Magento database with the module sche
 ```sh
 vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php vendor/commercekings/module-consent/Test/Integration/ConsentMappingTest.php
 vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php vendor/commercekings/module-consent/Test/Integration/WithdrawalWorkflowTest.php
+vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php vendor/commercekings/module-consent/Test/Integration/NativeExportTest.php
 ```
 It uses temporary tables and checks stored consent validation and guarded job updates across two websites, including removal and restoration of mappings. It leaves application records unchanged. To run from another directory, set `MAGENTO_ROOT` to the installed Magento root; the test supports Composer installs and source mounts without relying on package directory depth.
+
+The native export test checks filter metadata, paginated SQL reads, historical wording, CSV escaping, exclusions, configuration scope and the standard export consumer's finished file. Its connection-local temporary tables and export files are removed after each test; it does not consume the application's queue.

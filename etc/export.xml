@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_ImportExport:etc/export.xsd">
+    <entity name="consent_records" label="Consent records" model="CommerceKings\Consent\Model\Export\Records" entityAttributeFilterType="consent_records"/>
+    <entity name="consent_configuration" label="Consent configuration" model="CommerceKings\Consent\Model\Export\Configuration" entityAttributeFilterType="consent_configuration"/>
+</config>
