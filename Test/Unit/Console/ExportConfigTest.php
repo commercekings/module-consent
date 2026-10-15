@@ -36,4 +36,44 @@ class ExportConfigTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $tester->execute([]);
     }
+
+    public function testMissingPolicyFileIsRejectedBeforeEvidenceIsBuilt(): void
+    {
+        $this->assertInvalidPolicyFile(sys_get_temp_dir() . '/missing-policy-' . bin2hex(random_bytes(8)));
+    }
+
+    public function testDirectoryIsNotAcceptedAsAPolicyFile(): void
+    {
+        $this->assertInvalidPolicyFile(sys_get_temp_dir());
+    }
+
+    public function testUnreadablePolicyFileIsRejectedBeforeEvidenceIsBuilt(): void
+    {
+        $file = tempnam(sys_get_temp_dir(), 'ck-policy-');
+        try {
+            chmod($file, 0000);
+            clearstatcache(true, $file);
+            if (is_readable($file)) {
+                $this->markTestSkipped('Permission rejection requires an unprivileged user; root can read mode 0000.');
+            }
+            $this->assertInvalidPolicyFile($file);
+        } finally {
+            chmod($file, 0600);
+            unlink($file);
+        }
+    }
+
+    private function assertInvalidPolicyFile(string $file): void
+    {
+        $evidence = $this->createMock(ConfigurationEvidence::class);
+        $evidence->expects($this->never())->method('get');
+        $tester = new CommandTester(new ExportConfig($evidence));
+        try {
+            $tester->execute(['--store' => 'shop', '--policy-file' => $file]);
+            $this->fail('An invalid policy file must not produce an export.');
+        } catch (\InvalidArgumentException $error) {
+            $this->assertSame('The policy file must be a readable local file.', $error->getMessage());
+        }
+        $this->assertSame('', $tester->getDisplay());
+    }
 }

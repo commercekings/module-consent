@@ -138,6 +138,31 @@ class NativeExportTest extends TestCase
         $this->export('consent_records', ['website_id' => [['eq' => 1], '']]);
     }
 
+    public function testMalformedDateIsRejectedWithAnInputException(): void
+    {
+        $this->expectException(\Magento\Framework\Exception\InputException::class);
+        $this->expectExceptionMessage('Invalid export date for granted_at.');
+        $this->export('consent_records', ['granted_at' => ['definitely-not-a-date', '']]);
+    }
+
+    public function testTimezoneFailureIsWrappedWithoutExportingRows(): void
+    {
+        $timezone = $this->createMock(\Magento\Framework\Stdlib\DateTime\TimezoneInterface::class);
+        $error = new \RuntimeException('Timezone conversion unavailable');
+        $timezone->expects($this->once())->method('date')->willThrowException($error);
+        $adapter = $this->om->create(Records::class, ['timezone' => $timezone]);
+        $writer = $this->createMock(Export\Adapter\Csv::class);
+        $writer->expects($this->never())->method('writeRow');
+        try {
+            $adapter->setParameters([Export::FILTER_ELEMENT_GROUP => ['granted_at' => ['1/2/2026', '']]])
+                ->setWriter($writer)->export();
+            $this->fail('A failed date conversion must stop export.');
+        } catch (\Magento\Framework\Exception\InputException $caught) {
+            $this->assertSame($error, $caught->getPrevious());
+            $this->assertSame('Invalid export date for granted_at.', $caught->getMessage());
+        }
+    }
+
     public function testBrokenSnapshotIsReportedWithoutReplacingItWithCurrentText(): void
     {
         $this->db->update($this->wordingTable, ['content' => '{"text":"Tampered"}']);

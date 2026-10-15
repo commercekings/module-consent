@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Exercise withdrawal lock contention, cleanup completion/retry storage failures, grant persistence failures and CLI/export rejection paths with dedicated failure tests.
 - Use CommerceKings_Core for the shared admin tab, crown icon and corporate-site footer.
 - Group admin settings into Source, Records, Withdrawal and Privacy; simplify wording, show required recording purposes as locked selections, and hide other sections when no source is selected. Link one-click unsubscribe help to RFC 8058.
 

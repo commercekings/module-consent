@@ -53,7 +53,7 @@ class ConsentServiceTest extends TestCase
         $this->store->db->method('getTransactionLevel')->willReturn(0);
     }
 
-    private function service(): ConsentService
+    private function service(?LockManagerInterface $locks = null, ?WithdrawalCleanupStore $tasks = null): ConsentService
     {
         $source = $this->createStub(SourceInterface::class);
         $source->method('getCode')->willReturn('banner');
@@ -87,10 +87,14 @@ class ConsentServiceTest extends TestCase
         ]);
         $wording = $this->createStub(WordingSnapshot::class);
         $wording->method('currentHash')->willReturnCallback(fn () => $this->wordingHash);
-        $locks = $this->createStub(LockManagerInterface::class);
-        $locks->method('lock')->willReturn(true);
-        $tasks = $this->createStub(WithdrawalCleanupStore::class);
-        $tasks->method('schedule')->willReturn([]);
+        if ($locks === null) {
+            $locks = $this->createStub(LockManagerInterface::class);
+            $locks->method('lock')->willReturn(true);
+        }
+        if ($tasks === null) {
+            $tasks = $this->createStub(WithdrawalCleanupStore::class);
+            $tasks->method('schedule')->willReturn([]);
+        }
         return new ConsentService($this->store, $configured, $purposes, $browser, $config, $stores, $events, $wording,
             new Random(), new WithdrawalPool(), $tasks, $this->createStub(WithdrawalCleanup::class), $locks, new NullLogger());
     }
@@ -98,6 +102,50 @@ class ConsentServiceTest extends TestCase
     private function choose(array $purposes, string $time, string $reference = 'cid-1', string $revision = '1'): void
     {
         $this->choice = new SourceChoice($reference, $time, $revision, $purposes);
+    }
+
+    public function testUnavailableScopeLockLeavesConsentAndCleanupUntouched(): void
+    {
+        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $id = $this->service()->getCurrent('cart_reminder')->consentId;
+        $before = $this->store->rows;
+        $db = $this->createMock(AdapterInterface::class);
+        $db->method('getTransactionLevel')->willReturn(0);
+        $db->expects($this->never())->method('beginTransaction');
+        $this->store->db = $db;
+        $locks = $this->createMock(LockManagerInterface::class);
+        $locks->expects($this->once())->method('lock')->with($this->isString(), 5)->willReturn(false);
+        $locks->expects($this->never())->method('unlock');
+        $tasks = $this->createMock(WithdrawalCleanupStore::class);
+        $tasks->expects($this->never())->method('schedule');
+        try {
+            $this->service($locks, $tasks)->withdraw($id, 'email');
+            $this->fail('A busy withdrawal must not acknowledge success.');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('Consent withdrawal is busy; retry the request.', $error->getMessage());
+        }
+        $this->assertSame($before, $this->store->rows);
+        $this->assertSame([], $this->store->marks);
+        $this->assertSame([], $this->events);
+    }
+
+    public function testGrantPersistenceFailureCannotAcknowledgePermissionAndCanBeRetried(): void
+    {
+        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->store = $this->createPartialMock(InMemoryConsentStore::class, ['record']);
+        $error = new \RuntimeException('Storage unavailable');
+        $this->store->expects($this->once())->method('record')->willThrowException($error);
+        try {
+            $this->service()->grantCurrent('cart_reminder');
+            $this->fail('An unstored grant must not be acknowledged.');
+        } catch (\RuntimeException $caught) {
+            $this->assertSame($error, $caught);
+        }
+        $this->assertSame([], $this->store->rows);
+        $this->assertSame([], $this->events);
+        $this->store = new InMemoryConsentStore();
+        $this->assertNotNull($this->service()->grantCurrent('cart_reminder'));
+        $this->assertCount(1, $this->store->rows);
     }
 
     public function testFirstUseRecordsTheChoiceOnceWithAServerIssuedId(): void

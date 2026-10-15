@@ -100,4 +100,62 @@ class WithdrawalCleanupTest extends TestCase
         (new WithdrawalCleanup($store, new WithdrawalPool(['reminders' => ['feature' => $handler]]),
             $locks, new NullLogger()))->run([1, 2]);
     }
+
+    public function testCompletionFailureRetriesTheIdempotentHandlerAndReleasesItsLock(): void
+    {
+        $store = $this->createMock(WithdrawalCleanupStore::class);
+        $store->method('loadDue')->willReturn($this->task());
+        $completions = 0;
+        $store->expects($this->exactly(2))->method('complete')->with(1)->willReturnCallback(
+            function () use (&$completions) {
+                if (++$completions === 1) { throw new \RuntimeException('delete failed'); }
+            }
+        );
+        $store->expects($this->once())->method('retry')->with(1, 3);
+        $remaining = ['old-consent' => 'guest data', 'unrelated' => 'keep'];
+        $handler = $this->createMock(WithdrawalHandlerInterface::class);
+        $handler->expects($this->exactly(2))->method('execute')->willReturnCallback(
+            function (WithdrawalContext $context) use (&$remaining) {
+                foreach ($context->consentIds as $id) { unset($remaining[$id]); }
+            }
+        );
+        $locks = $this->createMock(LockManagerInterface::class);
+        $locks->expects($this->exactly(2))->method('lock')->with('ck_consent_cleanup_1', 0)->willReturn(true);
+        $locks->expects($this->exactly(2))->method('unlock')->with('ck_consent_cleanup_1');
+        $cleanup = new WithdrawalCleanup($store, new WithdrawalPool(['reminders' => ['feature' => $handler]]),
+            $locks, new NullLogger());
+        $cleanup->run([1]);
+        $this->assertSame(['unrelated' => 'keep'], $remaining);
+        $cleanup->run([1]);
+        $this->assertSame(['unrelated' => 'keep'], $remaining);
+    }
+
+    public function testRetryStorageFailureReleasesTheLockAndContinuesTheBatch(): void
+    {
+        $store = $this->createMock(WithdrawalCleanupStore::class);
+        $store->method('loadDue')->willReturnCallback(function (int $id) {
+            return array_replace($this->task(), ['task_id' => $id, 'consent_id' => 'consent-' . $id]);
+        });
+        $store->expects($this->once())->method('retry')->with(1, 3)
+            ->willThrowException(new \RuntimeException('retry write failed'));
+        $store->expects($this->once())->method('complete')->with(2);
+        $handler = $this->createMock(WithdrawalHandlerInterface::class);
+        $handler->expects($this->exactly(2))->method('execute')->willReturnCallback(function (WithdrawalContext $context) {
+            if ($context->consentIds === ['consent-1']) { throw new \RuntimeException('handler failed'); }
+            $this->assertSame(['consent-2'], $context->consentIds);
+        });
+        $unlocked = [];
+        $locks = $this->createMock(LockManagerInterface::class);
+        $locks->expects($this->exactly(2))->method('lock')->willReturn(true);
+        $locks->expects($this->exactly(2))->method('unlock')->willReturnCallback(function ($name) use (&$unlocked) {
+            $unlocked[] = $name;
+            return true;
+        });
+        $logger = $this->createMock(\Psr\Log\LoggerInterface::class);
+        $logger->expects($this->once())->method('error')->with($this->isString(),
+            ['task_id' => 1, 'exception_class' => \RuntimeException::class]);
+        (new WithdrawalCleanup($store, new WithdrawalPool(['reminders' => ['feature' => $handler]]),
+            $locks, $logger))->run([1, 2]);
+        $this->assertSame(['ck_consent_cleanup_1', 'ck_consent_cleanup_2'], $unlocked);
+    }
 }
