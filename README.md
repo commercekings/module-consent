@@ -1,6 +1,4 @@
-# CommerceKings_Consent
-
-**Development status:** first-release feature scope frozen; polishing and verification remain before publication.
+# Consent records
 
 Answers "may we do **purpose X** for this visitor?" from a consent recorded on the server – one that can be checked
 later (in cron or a queue), withdrawn reliably and shown as evidence. It knows no banner and no feature: a
@@ -56,10 +54,15 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 
 ## Extending
 
-Features use `Api\ConsentInterface`, `Api\ConsentGuardInterface` (SQL guard against a withdrawal at the same moment),
-`Api\WithdrawalHandlerInterface` (your cleanup) and `Api\ConsentOwnershipInterface`; in the browser
-`CommerceKings_Consent/js/consent/provider`. New banners implement `Api\SourceInterface`
-([adding a source](docs/sources.md)).
+Interfaces in CommerceKings\Consent\Api:
+
+- ConsentInterface: ask for and record consent
+- ConsentGuardInterface: SQL guard against a withdrawal at the same moment
+- WithdrawalHandlerInterface: your cleanup when consent is withdrawn
+- ConsentOwnershipInterface: is this the browser that consented?
+- SourceInterface: a new banner, see [adding a source](docs/sources.md)
+
+In the browser: CommerceKings_Consent/js/consent/provider.
 
 ## Limitations
 
