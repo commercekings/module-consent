@@ -54,15 +54,15 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 
 ## Extending
 
-`CommerceKings\Consent\Api\ConsentInterface` – ask for and record consent
+`Api\ConsentInterface` – ask for and record consent
 
-`CommerceKings\Consent\Api\ConsentGuardInterface` – SQL guard against a withdrawal at the same moment
+`Api\ConsentGuardInterface` – SQL guard against a withdrawal at the same moment
 
-`CommerceKings\Consent\Api\WithdrawalHandlerInterface` – your cleanup when consent is withdrawn
+`Api\WithdrawalHandlerInterface` – your cleanup when consent is withdrawn
 
-`CommerceKings\Consent\Api\ConsentOwnershipInterface` – is this the browser that consented?
+`Api\ConsentOwnershipInterface` – is this the browser that consented?
 
-`CommerceKings\Consent\Api\SourceInterface` – a new banner, see [adding a source](docs/sources.md)
+`Api\SourceInterface` – a new banner, see [adding a source](docs/sources.md)
 
 `CommerceKings_Consent/js/consent/provider` – the same in the browser
 
