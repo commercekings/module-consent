@@ -54,10 +54,19 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 
 ## Extending
 
-Features use `Api\ConsentInterface`, `Api\ConsentGuardInterface` (SQL guard against a withdrawal at the same moment),
-`Api\WithdrawalHandlerInterface` (your cleanup) and `Api\ConsentOwnershipInterface`; in the browser
-`CommerceKings_Consent/js/consent/provider`. New banners implement `Api\SourceInterface`
-([adding a source](docs/sources.md)).
+Interfaces in `CommerceKings\Consent\Api`:
+
+`ConsentInterface` – ask for and record consent
+
+`ConsentGuardInterface` – SQL guard against a withdrawal at the same moment
+
+`WithdrawalHandlerInterface` – your cleanup when consent is withdrawn
+
+`ConsentOwnershipInterface` – is this the browser that consented?
+
+`SourceInterface` – a new banner, see [adding a source](docs/sources.md)
+
+`CommerceKings_Consent/js/consent/provider` – the same in the browser
 
 ## Limitations
 
