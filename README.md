@@ -13,20 +13,22 @@ Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 It answers "may we do **purpose X** for this visitor?" – also later, in cron or a queue – and knows no banner and no
 feature: a **source** (a cookie banner) reports the visitor's choice, a **feature** asks and keeps the consent id.
 
-## How it fits
+## Installation
 
-- **A banner** – install a source, e.g. `commercekings/module-consent-vanilla` (it brings the default categories,
-  `commercekings/module-consent-defaults`).
-- **Email notifications** – install `commercekings/privacy-bundle` (the bridge and the banner): Notification's
-  subscriptions then need a consent, and withdrawing it removes them. Without the bridge they run opt-out.
-- **Your own feature** – declare a purpose and ask the API ([for features](docs/for-features.md)).
-
-Without a selected source nothing has consent: the module fails closed.
+Usually a banner or the privacy bundle brings it. On its own:
 
 ```sh
 composer require commercekings/module-consent:^0.1
 bin/magento setup:upgrade
 ```
+
+Without a selected source nothing has consent: the module fails closed.
+
+## How it fits
+
+- **A banner** – install a source, e.g. `commercekings/module-consent-vanilla` (it brings the default categories).
+- **Email notifications** – install `commercekings/privacy-bundle` (the bridge and the banner).
+- **Your own feature** – declare a purpose and ask the API ([for features](docs/for-features.md)).
 
 ## The model
 
@@ -71,7 +73,7 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 
 `Api\SourceInterface` – a new banner, see [adding a source](docs/sources.md)
 
-`CommerceKings_Consent/js/consent/provider` – the same in the browser (Luma)
+`js/consent/provider` – the same in the browser (Luma)
 
 `ck-consent:ready` / `window.CommerceKingsConsent.provider` – the same on Hyvä, detected automatically
 
