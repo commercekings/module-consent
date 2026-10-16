@@ -2,11 +2,11 @@
 
 # Provable Consent
 
+<sub>Expert Magento engineering. New store, maintenance, custom development, high-performance hosting or more sales? [Talk to us](https://commercekings.net).</sub>
+
 Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
 [![License](https://badgen.net/github/license/commercekings/module-consent)](LICENSE) [![Release](https://badgen.net/github/release/commercekings/module-consent)](https://github.com/commercekings/module-consent/releases) [![Checks](https://badgen.net/github/checks/commercekings/module-consent/main?label=checks)](https://github.com/commercekings/module-consent/actions)
-
-<sub>Expert Magento engineering. New store, maintenance, custom development, high-performance hosting or more sales? [Talk to us](https://commercekings.net).</sub>
 
 **Most banners only set a cookie. This one keeps the proof** – recorded on the server, withdrawn reliably, exported as
 evidence.
