@@ -2,6 +2,8 @@
 
 Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
+<sub>Built by [CommerceKings](https://commercekings.net) – expert Magento engineering. New store, maintenance, custom development or more sales? [Talk to us](https://commercekings.net).</sub>
+
 **Consent you can prove – recorded on the server, withdrawn reliably, exported as evidence.**
 
 - **Proof when you need it.** Each consent keeps the exact wording the visitor saw; export it as CSV from the admin.
