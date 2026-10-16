@@ -1,4 +1,4 @@
-<a href="https://commercekings.net"><img align="right" src="https://img.shields.io/badge/Built%20by-CommerceKings-24292F" alt="Built by CommerceKings – expert Magento engineering"></a>
+<a href="https://commercekings.net"><img align="right" src="https://img.shields.io/badge/Built%20by-CommerceKings-F26322?labelColor=1F1F1F" alt="Built by CommerceKings – expert Magento engineering"></a>
 
 # Consent records
 
