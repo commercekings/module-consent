@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<!-- Hyvä themes only: the email withdrawal page's buttons and spacing (Luma styles them already) -->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <css src="CommerceKings_Consent::css/hyva-optout.css"/>
+    </head>
+</page>

@@ -1,0 +1,43 @@
+.ck-optout {
+    padding: 1rem;
+}
+
+.ck-optout p + p {
+    margin-block-start: .5rem;
+}
+
+.ck-optout form {
+    margin-block: 1.25rem;
+}
+
+.ck-optout .action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: .75rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: .375rem;
+    background: var(--color-primary, #1f2937);
+    color: var(--color-on-primary, #fff);
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.ck-optout a.action {
+    border-color: currentColor;
+    background: transparent;
+    color: var(--color-primary, #1f2937);
+}
+
+.ck-optout .action:hover {
+    text-decoration: underline;
+}
+
+.ck-optout .action:focus-visible {
+    outline: 2px solid var(--color-primary, #1f2937);
+    outline-offset: 3px;
+}
