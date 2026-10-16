@@ -11,7 +11,7 @@ later (in cron or a queue), withdrawn reliably and shown as evidence. It knows n
 - **A banner** – install a source, e.g. `commercekings/module-consent-vanilla` (it brings the default categories,
   `commercekings/module-consent-defaults`).
 - **Email notifications** – install the bridge `commercekings/module-consent-notification`: Notification's
-  subscriptions then need a consent, and withdrawing it removes them.
+  subscriptions then need a consent, and withdrawing it removes them. Without the bridge they run opt-out.
 - **Your own feature** – declare a purpose and ask the API ([for features](docs/for-features.md)).
 
 Without a selected source nothing has consent: the module fails closed.
