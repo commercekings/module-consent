@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- consent endpoints keep the shopper's store view and currency in the page cache -->
+    <type name="CommerceKings\Core\Observer\KeepVaryCookie">
+        <arguments>
+            <argument name="routes" xsi:type="array">
+                <item name="ckconsent" xsi:type="string">ckconsent</item>
+            </argument>
+        </arguments>
+    </type>
+</config>
