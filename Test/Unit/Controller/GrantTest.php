@@ -10,6 +10,7 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\Json;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Data\Form\FormKey\Validator;
+use Magento\Framework\App\Action\Context;
 use PHPUnit\Framework\TestCase;
 
 class GrantTest extends TestCase
@@ -30,7 +31,7 @@ class GrantTest extends TestCase
         $consent = $granted ? new Consent('private-id', 'cart_reminder', 1, 'source', 'reference', 'source-time',
             '1', '1', 'granted-at', 'expires-at') : null;
         $service->expects($this->once())->method('grantCurrent')->with('cart_reminder')->willReturn($consent);
-        (new Index($request, $factory, $service, $validator))->execute();
+        (new Index($this->createStub(Context::class), $request, $factory, $service, $validator))->execute();
         $this->assertSame(['granted' => $granted], $data, 'no consent id leaks to the page');
     }
 

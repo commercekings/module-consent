@@ -10,6 +10,7 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\Json;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Data\Form\FormKey\Validator;
+use Magento\Framework\App\Action\Context;
 use PHPUnit\Framework\TestCase;
 
 class PurposeInputTest extends TestCase
@@ -32,7 +33,7 @@ class PurposeInputTest extends TestCase
             ->with($action === Grant::class ? ['granted' => false] : ['withdrawn' => 0])->willReturnSelf();
         $factory = $this->createStub(JsonFactory::class);
         $factory->method('create')->willReturn($json);
-        $this->assertSame($json, (new $action($request, $factory, $service, $validator))->execute());
+        $this->assertSame($json, (new $action($this->createStub(Context::class), $request, $factory, $service, $validator))->execute());
     }
 
     public static function refusedRequests(): array

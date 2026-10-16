@@ -9,6 +9,7 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\Json;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Data\Form\FormKey\Validator;
+use Magento\Framework\App\Action\Context;
 use PHPUnit\Framework\TestCase;
 
 class WithdrawTest extends TestCase
@@ -26,7 +27,7 @@ class WithdrawTest extends TestCase
         $factory->method('create')->willReturn($json);
         $service = $this->createMock(ConsentInterface::class);
         $service->expects($this->once())->method('withdrawCurrent')->with('cart_reminder', 'banner')->willReturn(['a', 'b']);
-        (new Index($request, $factory, $service, $validator))->execute();
+        (new Index($this->createStub(Context::class), $request, $factory, $service, $validator))->execute();
         $this->assertSame(['withdrawn' => 2], $data);
     }
 }

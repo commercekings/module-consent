@@ -16,6 +16,7 @@ use Magento\Framework\View\Page\Title;
 use Magento\Framework\View\Result\Page;
 use Magento\Framework\View\Result\PageFactory;
 use Magento\Framework\Data\Form\FormKey\Validator;
+use Magento\Framework\App\Action\Context;
 use PHPUnit\Framework\TestCase;
 
 class OptoutTest extends TestCase
@@ -87,7 +88,7 @@ class OptoutTest extends TestCase
         $owner = $browserHash !== '' && $recordHash === $browserHash;
         $showsPage = $allowed && $record && ($owner || ($method === 'GET' && $record->withdrawnAt === null));
         $pageFactory->expects($showsPage ? $this->once() : $this->never())->method('create')->willReturn($page);
-        return new Index($request, $links, $pageFactory, $redirectFactory, $browser, $store, $validator, $rawFactory);
+        return new Index($this->createStub(Context::class), $request, $links, $pageFactory, $redirectFactory, $browser, $store, $validator, $rawFactory);
     }
 
     public function testSignedGetShowsConfirmationWithoutWithdrawing(): void

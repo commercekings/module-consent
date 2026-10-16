@@ -6,6 +6,8 @@ namespace CommerceKings\Consent\Controller\Optout;
 use CommerceKings\Consent\Api\BrowserIdentityInterface;
 use CommerceKings\Consent\Model\ConsentStore;
 use CommerceKings\Consent\Model\WithdrawalLink;
+use Magento\Framework\App\Action\Action;
+use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\CsrfAwareActionInterface;
@@ -18,14 +20,18 @@ use Magento\Framework\Data\Form\FormKey\Validator;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\RawFactory;
 
-/** GET confirms; browser POST requires a form key; RFC 8058 POST uses the signed URL without browser state. */
-class Index implements HttpGetActionInterface, HttpPostActionInterface, CsrfAwareActionInterface
+/**
+ * GET confirms; browser POST requires a form key; RFC 8058 POST uses the signed URL without browser state.
+ * Extends Action so Magento sets the store and currency context (X-Magento-Vary).
+ */
+class Index extends Action implements HttpGetActionInterface, HttpPostActionInterface, CsrfAwareActionInterface
 {
     use RejectsMalformedFormKeys {
         validateForCsrf as private validateBrowserCsrf;
     }
 
     public function __construct(
+        Context $context,
         private readonly Http $request,
         private readonly WithdrawalLink $links,
         private readonly PageFactory $pageFactory,
@@ -35,6 +41,7 @@ class Index implements HttpGetActionInterface, HttpPostActionInterface, CsrfAwar
         private readonly Validator $formKeyValidator,
         private readonly RawFactory $rawFactory
     ) {
+        parent::__construct($context);
     }
 
     public function execute(): ResultInterface

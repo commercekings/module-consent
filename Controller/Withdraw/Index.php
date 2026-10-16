@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace CommerceKings\Consent\Controller\Withdraw;
 
 use CommerceKings\Consent\Api\ConsentInterface;
+use Magento\Framework\App\Action\Action;
+use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\CsrfAwareActionInterface;
 use CommerceKings\Consent\Controller\RejectsMalformedFormKeys;
@@ -18,16 +20,19 @@ use Magento\Framework\Data\Form\FormKey\Validator;
  * reload the page). If the source really says "no" now, this browser's consents for the purpose are
  * withdrawn and their registered module cleanup actions run after commit (with retry on failure).
  * commercekings_consent_withdrawn remains a compatibility notification.
+ * Extends Action so Magento sets the store and currency context (X-Magento-Vary).
  */
-class Index implements HttpPostActionInterface, CsrfAwareActionInterface
+class Index extends Action implements HttpPostActionInterface, CsrfAwareActionInterface
 {
     use RejectsMalformedFormKeys;
     public function __construct(
+        Context $context,
         private readonly RequestInterface $request,
         private readonly JsonFactory $jsonFactory,
         private readonly ConsentInterface $consents,
         private readonly Validator $formKeyValidator
     ) {
+        parent::__construct($context);
     }
 
     public function execute(): Json
