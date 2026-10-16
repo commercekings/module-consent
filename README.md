@@ -1,5 +1,9 @@
 # Consent records
 
+**Consent you can prove: recorded on the server, withdrawn reliably, exported as evidence.**
+
+Per-purpose consent · wording snapshots · CSV evidence exports · race-safe withdrawal · Luma and Hyvä
+
 Answers "may we do **purpose X** for this visitor?" from a consent recorded on the server – one that can be checked
 later (in cron or a queue), withdrawn reliably and shown as evidence. It knows no banner and no feature: a
 **source** (a cookie banner) reports the visitor's choice, a **feature** asks and keeps the consent id.
