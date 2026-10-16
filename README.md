@@ -1,6 +1,6 @@
 <a href="https://commercekings.net"><img align="right" src="https://img.shields.io/badge/Built%20by-CommerceKings-F26322?labelColor=1F1F1F" alt="Built by CommerceKings – expert Magento engineering"></a>
 
-# Consent records
+# Provable Consent
 
 Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
@@ -8,11 +8,13 @@ Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
 <sub>Expert Magento engineering. New store, maintenance, custom development, high-performance hosting or more sales? [Talk to us](https://commercekings.net).</sub>
 
-**Consent you can prove – recorded on the server, withdrawn reliably, exported as evidence.**
+**Most banners only set a cookie. This one keeps the proof** – recorded on the server, withdrawn reliably, exported as
+evidence.
 
 - **Proof when you need it.** Each consent keeps the exact wording the visitor saw; export it as CSV from the admin.
 - **Withdrawal that really stops things.** Queued emails are dropped the moment a shopper says no, and an old "yes"
   cookie can't come back.
+- **Changed wording? Everyone is asked again.** Raise the revision; old consent never covers new terms.
 - **No email addresses stored.** A consent belongs to a browser, not a person.
 - **You decide what to record** – always for server features like reminders, optional for analytics.
 
