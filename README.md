@@ -1,12 +1,17 @@
 # Consent records
 
-**Consent you can prove, when you need to: recorded on the server where it matters, withdrawn reliably, exported as evidence.**
+Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
-Consent per purpose and website · no email addresses stored – a consent belongs to a browser, not a person · choose which purposes to record (always on for server features like reminders, optional for analytics) · the exact wording each visitor saw · CSV evidence exports from the admin · withdrawals that stop queued work instantly · old "yes" cookies can't come back · asks everyone again when your terms change · records expire on your retention schedule · Luma and Hyvä
+**Consent you can prove – recorded on the server, withdrawn reliably, exported as evidence.**
 
-Answers "may we do **purpose X** for this visitor?" from a consent recorded on the server – one that can be checked
-later (in cron or a queue), withdrawn reliably and shown as evidence. It knows no banner and no feature: a
-**source** (a cookie banner) reports the visitor's choice, a **feature** asks and keeps the consent id.
+- **Proof when you need it.** Each consent keeps the exact wording the visitor saw; export it as CSV from the admin.
+- **Withdrawal that really stops things.** Queued emails are dropped the moment a shopper says no, and an old "yes"
+  cookie can't come back.
+- **No email addresses stored.** A consent belongs to a browser, not a person.
+- **You decide what to record** – always for server features like reminders, optional for analytics.
+
+It answers "may we do **purpose X** for this visitor?" – also later, in cron or a queue – and knows no banner and no
+feature: a **source** (a cookie banner) reports the visitor's choice, a **feature** asks and keeps the consent id.
 
 ## How it fits
 
@@ -26,12 +31,10 @@ bin/magento setup:upgrade
 ## The model
 
 - A **consent** is one choice, for one purpose, in one browser, on one website, stored in `ck_consent` with a
-  server-issued id – no email address.
+  server-issued id.
 - It is **valid** while not withdrawn or expired and still under today's source, banner revision and purpose terms.
   Raising either revision asks everyone again.
-- A **withdrawal** – in the banner or through an email link – revokes it at once, and the same old choice is never
-  accepted again (e.g. an old "yes" cookie on another device).
-- Each consent keeps a hash of the **wording** the visitor saw.
+- A **withdrawal** works in the banner or through an email link.
 
 ## Settings
 
