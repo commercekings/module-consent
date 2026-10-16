@@ -4,7 +4,7 @@
 
 Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
-<sub>Expert Magento engineering. New store, maintenance, custom development or more sales? [Talk to us](https://commercekings.net).</sub>
+<sub>Expert Magento engineering. New store, maintenance, custom development, high-performance hosting or more sales? [Talk to us](https://commercekings.net).</sub>
 
 **Consent you can prove – recorded on the server, withdrawn reliably, exported as evidence.**
 
