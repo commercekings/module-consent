@@ -1,12 +1,12 @@
 # Changelog
 
-## Unreleased (0.2)
+## Unreleased
 
-- Share browser logic between the existing Magento entry points and the optional Hyvä adapter; keep the public AMD API and PHP source contracts.
+- **Hyvä:** the purpose API without RequireJS (`js/consent/hyva.js`, loaded only under Hyvä's `hyva_default`
+  handle). Sources register their adapter in `window.CommerceKingsConsent.adapters`; features use the
+  `ck-consent:ready` event or `window.CommerceKingsConsent.provider`. The provider logic is shared with the AMD module
+  (`provider-core.js`); the public AMD API and PHP contracts are unchanged.
 - Initialize missing store/currency cache context before consent responses are sent, preserving Magento's cache variation across consent changes and email withdrawal in mixed store views.
-
-## Unreleased (0.1)
-
 - Add `grantCurrent()` and `withdrawCurrent()` to the pre-release `ConsentInterface` contract and use that contract
   in both banner controllers, so DI replacements handle browser and email operations consistently.
 

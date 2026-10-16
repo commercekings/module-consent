@@ -15,7 +15,7 @@ later (in cron or a queue), withdrawn reliably and shown as evidence. It knows n
 Without a selected source nothing has consent: the module fails closed.
 
 ```sh
-composer require commercekings/module-consent:^0.2
+composer require commercekings/module-consent:^0.1
 bin/magento setup:upgrade
 ```
 
@@ -64,7 +64,9 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 
 `Api\SourceInterface` – a new banner, see [adding a source](docs/sources.md)
 
-`CommerceKings_Consent/js/consent/provider` – the same in the browser
+`CommerceKings_Consent/js/consent/provider` – the same in the browser (Luma)
+
+`ck-consent:ready` / `window.CommerceKingsConsent.provider` – the same on Hyvä, detected automatically
 
 ## Limitations
 

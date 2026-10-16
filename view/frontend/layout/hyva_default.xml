@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!-- Hyvä themes only (Hyvä adds the hyva_default handle): the purpose API without RequireJS -->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="before.body.end">
+            <block class="Magento\Framework\View\Element\Template" name="commercekings.consent.hyva.provider" template="CommerceKings_Consent::hyva/provider.phtml"/>
+        </referenceContainer>
+    </body>
+</page>

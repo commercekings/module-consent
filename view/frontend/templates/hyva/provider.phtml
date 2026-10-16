@@ -1,0 +1,15 @@
+<?php
+/**
+ * Hyvä: the purpose API without RequireJS (js/consent/hyva.js). Sources add their own scripts.
+ *
+ * @var \Magento\Framework\View\Element\Template $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+$scripts = [
+    'CommerceKings_Consent::js/consent/provider-core.js',
+    'CommerceKings_Consent::js/consent/hyva.js',
+];
+?>
+<?php foreach ($scripts as $script): ?>
+<script src="<?= $escaper->escapeUrl($block->getViewFileUrl($script)) ?>" defer></script>
+<?php endforeach; ?>
