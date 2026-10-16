@@ -1,8 +1,10 @@
+<a href="https://commercekings.net"><img align="right" src="https://img.shields.io/badge/Built%20by-CommerceKings-24292F" alt="Built by CommerceKings – expert Magento engineering"></a>
+
 # Consent records
 
 Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
-<sub>Built by [CommerceKings](https://commercekings.net) – expert Magento engineering. New store, maintenance, custom development or more sales? [Talk to us](https://commercekings.net).</sub>
+<sub>Expert Magento engineering. New store, maintenance, custom development or more sales? [Talk to us](https://commercekings.net).</sub>
 
 **Consent you can prove – recorded on the server, withdrawn reliably, exported as evidence.**
 
