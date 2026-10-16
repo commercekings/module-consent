@@ -6,7 +6,8 @@
   handle). Sources register their adapter in `window.CommerceKingsConsent.adapters`; features use the
   `ck-consent:ready` event or `window.CommerceKingsConsent.provider`. The provider logic is shared with the AMD module
   (`provider-core.js`); the public AMD API and PHP contracts are unchanged.
-- Initialize missing store/currency cache context before consent responses are sent, preserving Magento's cache variation across consent changes and email withdrawal in mixed store views.
+- Consent responses leave the `X-Magento-Vary` cookie as the last page set it (marked `NotCacheable`), so
+  consent changes and email withdrawal never switch the shopper to another store view or currency in the page cache.
 - Add `grantCurrent()` and `withdrawCurrent()` to the pre-release `ConsentInterface` contract and use that contract
   in both banner controllers, so DI replacements handle browser and email operations consistently.
 
