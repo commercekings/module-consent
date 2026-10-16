@@ -15,7 +15,7 @@ later (in cron or a queue), withdrawn reliably and shown as evidence. It knows n
 Without a selected source nothing has consent: the module fails closed.
 
 ```sh
-composer require commercekings/module-consent:^0.1
+composer require commercekings/module-consent:^0.2
 bin/magento setup:upgrade
 ```
 

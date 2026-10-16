@@ -56,12 +56,19 @@ function browser(configs = {}) {
 
 function load(browser, module, dependencies = {}) {
     let exported;
+    const shared = {
+        'CommerceKings_Consent/js/consent/provider-core': 'module-consent/view/frontend/web/js/consent/provider-core.js',
+        'CommerceKings_ConsentVanilla/js/adapter-core': 'module-consent-vanilla/view/frontend/web/js/adapter-core.js',
+        'CommerceKings_ConsentVanilla/js/banner-core': 'module-consent-vanilla/view/frontend/web/js/banner-core.js'
+    };
     browser.context.define = (names, factory) => {
         exported = factory(...names.map(name => {
+            if (!(name in dependencies) && name in shared) return load(browser, shared[name]);
             if (!(name in dependencies)) throw new Error(`Missing dependency ${name}`);
             return dependencies[name];
         }));
     };
+    browser.context.define.amd = {};
     vm.runInContext(fs.readFileSync(path.join(modules, module), 'utf8'), browser.context, {filename: module});
     return exported;
 }

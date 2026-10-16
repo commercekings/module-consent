@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## Unreleased (0.2)
+
+- Share browser logic between the existing Magento entry points and the optional Hyvä adapter; keep the public AMD API and PHP source contracts.
+- Initialize missing store/currency cache context before consent responses are sent, preserving Magento's cache variation across consent changes and email withdrawal in mixed store views.
+
+## Unreleased (0.1)
 
 - Add `grantCurrent()` and `withdrawCurrent()` to the pre-release `ConsentInterface` contract and use that contract
   in both banner controllers, so DI replacements handle browser and email operations consistently.
