@@ -5,7 +5,7 @@ namespace CommerceKings\Consent\Test\Unit\Controller;
 
 use CommerceKings\Consent\Controller\Grant\Index as Grant;
 use CommerceKings\Consent\Controller\Withdraw\Index as Withdraw;
-use CommerceKings\Consent\Model\ConsentService;
+use CommerceKings\Consent\Api\ConsentInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\Json;
 use Magento\Framework\Controller\Result\JsonFactory;
@@ -23,7 +23,7 @@ class PurposeInputTest extends TestCase
         $request->method('getParam')->willReturnCallback(fn ($name) => $name === 'purpose' ? $purpose : $key);
         $validator = $this->createStub(Validator::class);
         $validator->method('validate')->willReturn($keyValid);
-        $service = $this->createMock(ConsentService::class);
+        $service = $this->createMock(ConsentInterface::class);
         $service->expects($this->never())->method('grantCurrent');
         $service->expects($this->never())->method('withdrawCurrent');
         $json = $this->createMock(Json::class);

@@ -21,6 +21,14 @@ interface ConsentInterface
      */
     public function getCurrent(string $purpose): ?Consent;
 
+    /**
+     * Record an explicit opt-in from the current source, including a new choice after withdrawal.
+     *
+     * @param string $purpose
+     * @return Consent|null
+     */
+    public function grantCurrent(string $purpose): ?Consent;
+
     /** A recorded consent (valid or not) - the evidence. */
     public function get(string $consentId): ?Consent;
 
@@ -39,4 +47,13 @@ interface ConsentInterface
      * @return string[]
      */
     public function withdraw(string $consentId, string $via): array;
+
+    /**
+     * Withdraw the current browser's consent only when its source reports that the purpose is off.
+     *
+     * @param string $purpose
+     * @param string $via
+     * @return string[] Consent ids withdrawn now.
+     */
+    public function withdrawCurrent(string $purpose, string $via): array;
 }

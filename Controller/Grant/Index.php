@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace CommerceKings\Consent\Controller\Grant;
 
-use CommerceKings\Consent\Model\ConsentService;
+use CommerceKings\Consent\Api\ConsentInterface;
 use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\CsrfAwareActionInterface;
 use CommerceKings\Consent\Controller\RejectsMalformedFormKeys;
@@ -23,7 +23,7 @@ class Index implements HttpPostActionInterface, CsrfAwareActionInterface
     public function __construct(
         private readonly RequestInterface $request,
         private readonly JsonFactory $jsonFactory,
-        private readonly ConsentService $consents,
+        private readonly ConsentInterface $consents,
         private readonly Validator $formKeyValidator
     ) {
     }

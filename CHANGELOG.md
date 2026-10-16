@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add `grantCurrent()` and `withdrawCurrent()` to the pre-release `ConsentInterface` contract and use that contract
+  in both banner controllers, so DI replacements handle browser and email operations consistently.
+
 - Add `Api\ConsentOwnershipInterface::isCurrentVisitor($consentId)`: whether a consent was given in the current
   browser, for features that hand back something the consenting visitor owns.
 - Exercise withdrawal lock contention, cleanup completion/retry storage failures, grant persistence failures and CLI/export rejection paths with dedicated failure tests.
