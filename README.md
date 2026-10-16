@@ -2,7 +2,7 @@
 
 **Consent you can prove, when you need to: recorded on the server where it matters, withdrawn reliably, exported as evidence.**
 
-Consent per purpose and website · choose which purposes to record (always on for server features like reminders, optional for analytics) · the exact wording each visitor saw · CSV evidence exports from the admin · withdrawals that stop queued work instantly · old "yes" cookies can't come back · asks everyone again when your terms change · records expire on your retention schedule · Luma and Hyvä
+Consent per purpose and website · no email addresses stored – a consent belongs to a browser, not a person · choose which purposes to record (always on for server features like reminders, optional for analytics) · the exact wording each visitor saw · CSV evidence exports from the admin · withdrawals that stop queued work instantly · old "yes" cookies can't come back · asks everyone again when your terms change · records expire on your retention schedule · Luma and Hyvä
 
 Answers "may we do **purpose X** for this visitor?" from a consent recorded on the server – one that can be checked
 later (in cron or a queue), withdrawn reliably and shown as evidence. It knows no banner and no feature: a
