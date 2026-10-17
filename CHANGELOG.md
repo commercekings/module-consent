@@ -3,6 +3,11 @@
 ## Unreleased
 
 - Requires Magento 2.4.4 or later (`magento/framework ^103.0.4`): Magento 2.4.0–2.4.3 do not run on PHP 8.1.
+- A purpose belongs to one banner category (the first in display order); the server no longer grants it through a
+  second category the banner does not watch.
+- The email withdrawal link confirms the result in every browser (generic text outside the browser that consented);
+  it used to redirect other browsers home without feedback. `consent:evidence:show` returns Magento's
+  `Cli::RETURN_*` codes, which also exist on Magento 2.4.4 (Symfony Console 4.4).
 - `source_time` and `expires_at` declare an explicit default. On MariaDB before 10.10 (and MySQL with
   `explicit_defaults_for_timestamp=OFF`) the first timestamp column otherwise became `ON UPDATE CURRENT_TIMESTAMP`,
   so a withdrawal overwrote the recorded choice time.

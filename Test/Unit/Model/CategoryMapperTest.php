@@ -61,7 +61,7 @@ class CategoryMapperTest extends TestCase
         ];
     }
 
-    public function testOnlyAcceptedCategoriesGrantPurposesAndSharedGrantsAreDeduplicated(): void
+    public function testOnlyAcceptedCategoriesGrantPurposes(): void
     {
         $mapper = $this->mapper();
         $categories = $mapper->normalize([
@@ -75,6 +75,24 @@ class CategoryMapperTest extends TestCase
         $this->assertSame(['external_content'], $mapper->acceptedPurposes($categories, ['maps']));
         $this->assertSame([], $mapper->acceptedPurposes($categories, ['missing']));
         $this->assertSame([], $mapper->acceptedPurposes($categories, []));
+    }
+
+    public function testAPurposeBelongsToItsFirstCategoryOnly(): void
+    {
+        // the banner turns cart_reminder on and off with one switch; the server must read the same switch
+        $mapper = $this->mapper();
+        $categories = $mapper->normalize([
+            'later' => ['purposes' => ['cart_reminder', 'external_content'], 'sort_order' => 20],
+            'earlier' => ['purposes' => ['cart_reminder'], 'sort_order' => 10],
+            'hidden' => ['purposes' => ['cart_reminder'], 'sort_order' => 30, 'hide_if_unmapped' => true],
+        ], '/[^a-z0-9_]/i');
+
+        $this->assertSame(['earlier', 'later'], array_keys($categories), 'a category left without purposes may hide');
+        $this->assertSame(['cart_reminder'], $categories['earlier']['purposes']);
+        $this->assertSame(['external_content'], $categories['later']['purposes']);
+        $this->assertSame(['external_content'], $mapper->acceptedPurposes($categories, ['later']),
+            'the later switch no longer grants cart_reminder');
+        $this->assertSame(['cart_reminder'], $mapper->acceptedPurposes($categories, ['earlier']));
     }
 
     public function testFrontendMappingUsesFirstGrantingCategoryWithoutSharingSourceState(): void

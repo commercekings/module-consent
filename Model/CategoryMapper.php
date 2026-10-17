@@ -40,18 +40,28 @@ class CategoryMapper
                 $listed,
                 fn ($purpose) => $this->purposes->isDeclared($purpose)
             )));
-            if (!empty($category['hide_if_unmapped']) && !$purposes) {
-                continue;
-            }
             $normalized[$key] = [
                 'label' => (string)__((string)($category['label'] ?? $key)),
                 'description' => (string)__((string)($category['description'] ?? '')),
                 'required' => $required,
                 'purposes' => $purposes,
                 'sort_order' => (int)($category['sort_order'] ?? 0),
+                'hide' => !empty($category['hide_if_unmapped']),
             ];
         }
         uasort($normalized, fn ($a, $b) => $a['sort_order'] <=> $b['sort_order']);
+        // One switch per purpose: a purpose listed in several categories belongs to the first in display order only,
+        // so turning one switch off is unambiguous for the banner and the server alike.
+        $taken = [];
+        foreach ($normalized as $key => $category) {
+            $normalized[$key]['purposes'] = array_values(array_diff($category['purposes'], $taken));
+            array_push($taken, ...$normalized[$key]['purposes']);
+            if ($category['hide'] && !$normalized[$key]['purposes']) {
+                unset($normalized[$key]);
+                continue;
+            }
+            unset($normalized[$key]['hide']);
+        }
         return $normalized;
     }
 

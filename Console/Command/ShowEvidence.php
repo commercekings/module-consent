@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CommerceKings\Consent\Console\Command;
 
+use Magento\Framework\Console\Cli;
 use CommerceKings\Consent\Model\RecordedEvidence;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -31,10 +32,10 @@ class ShowEvidence extends Command
         $evidence = $this->evidence->get((string)$input->getArgument('consent_id'));
         if (!$evidence) {
             $output->writeln('<error>No consent with this id.</error>');
-            return Command::FAILURE;
+            return Cli::RETURN_FAILURE;
         }
         $output->writeln(json_encode($evidence,
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), OutputInterface::OUTPUT_RAW);
-        return Command::SUCCESS;
+        return Cli::RETURN_SUCCESS;
     }
 }

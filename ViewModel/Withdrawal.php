@@ -64,8 +64,9 @@ class Withdrawal implements ArgumentInterface
 
     public function canConfirm(): bool
     {
+        // after the withdrawal, only the original browser has a banner choice to apply it to
         return $this->request->getMethod() === 'GET'
-            && (!$this->hasWithdrawnConsent() || !$this->hasNewerConsent());
+            && (!$this->hasWithdrawnConsent() || ($this->isOriginalBrowser() && !$this->hasNewerConsent()));
     }
 
     public function getBannerConfigJson(): string

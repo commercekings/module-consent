@@ -174,4 +174,18 @@ class WithdrawalTest extends TestCase
         $this->current = ['consent_id' => 'new-id', 'withdrawn_at' => null];
         $this->assertFalse($this->viewModel()->canConfirm());
     }
+
+    public function testAnotherBrowserSeesTheResultButNoBannerAction(): void
+    {
+        // the email opened on another device: the withdrawal is done, there is no banner choice here to apply it to
+        $this->hash = 'different';
+        $this->method = 'GET';
+        $view = $this->viewModel();
+        $this->assertTrue($view->hasWithdrawnConsent());
+        $this->assertFalse($view->isOriginalBrowser());
+        $this->assertFalse($view->canConfirm());
+        $this->assertSame('{}', $view->getBannerConfigJson());
+        $this->withdrawnAt = null;
+        $this->assertTrue($this->viewModel()->canConfirm(), 'not withdrawn yet: any browser with the link may confirm');
+    }
 }

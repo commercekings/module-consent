@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace CommerceKings\Consent\Controller\Optout;
 
-use CommerceKings\Consent\Api\BrowserIdentityInterface;
-use CommerceKings\Consent\Model\ConsentStore;
 use CommerceKings\Consent\Model\WithdrawalLink;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
@@ -36,8 +34,6 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
         private readonly WithdrawalLink $links,
         private readonly PageFactory $pageFactory,
         private readonly RedirectFactory $redirectFactory,
-        private readonly BrowserIdentityInterface $browser,
-        private readonly ConsentStore $store,
         private readonly Validator $formKeyValidator,
         private readonly RawFactory $rawFactory
     ) {
@@ -77,12 +73,8 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
         if (!$consent) {
             return $this->redirectFactory->create()->setPath('');
         }
-        $row = $this->store->load($id);
-        $hash = $this->browser->hash();
-        $owner = $row && $hash !== '' && hash_equals((string)$row['browser_hash'], $hash);
-        if (!$owner && ($post || $consent->withdrawnAt !== null)) {
-            return $this->redirectFactory->create()->setPath('');
-        }
+        // Any browser with the signed link sees the result; only the original browser sees the purpose and has its
+        // banner synced (Withdrawal view model).
         $page = $this->pageFactory->create();
         $page->getConfig()->getTitle()->set((string)($post || $consent->withdrawnAt !== null
             ? __('Consent withdrawn') : __('Withdraw consent')));

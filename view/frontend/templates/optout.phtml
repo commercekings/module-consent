@@ -12,6 +12,8 @@ $viewModel = $block->getData('view_model');
     <p><?= $escaper->escapeHtml(__('Withdraw the consent linked to this message?')) ?></p>
     <?php endif; ?>
     <p><?= $escaper->escapeHtml(__('Nothing changes until you confirm.')) ?></p>
+    <?php elseif (!$viewModel->isOriginalBrowser()): ?>
+    <p><?= $escaper->escapeHtml(__('The consent linked to this message has been withdrawn.')) ?></p>
     <?php elseif ($viewModel->hasNewerConsent()): ?>
     <p><?= $escaper->escapeHtml(__('Your earlier consent for "%purpose" was already withdrawn.', ['purpose' => $viewModel->getPurposeLabel()])) ?></p>
     <p><?= $escaper->escapeHtml(__('Your newer consent remains active. You can turn it off in cookie settings.')) ?></p>

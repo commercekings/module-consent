@@ -3,10 +3,8 @@ declare(strict_types=1);
 
 namespace CommerceKings\Consent\Test\Unit\Controller;
 
-use CommerceKings\Consent\Api\BrowserIdentityInterface;
 use CommerceKings\Consent\Api\Data\Consent;
 use CommerceKings\Consent\Controller\Optout\Index;
-use CommerceKings\Consent\Model\ConsentStore;
 use CommerceKings\Consent\Model\WithdrawalLink;
 use Magento\Framework\App\Request\Http;
 use Magento\Framework\Controller\Result\Redirect;
@@ -63,13 +61,6 @@ class OptoutTest extends TestCase
         $rawFactory->expects($machine ? $this->once() : $this->never())->method('create')->willReturn($raw);
         $validator = $this->createStub(Validator::class);
         $validator->method('validate')->willReturn($keyValid);
-        $store = $this->createMock(ConsentStore::class);
-        $store->expects($allowed && $record ? $this->once() : $this->never())->method('load')
-            ->with(str_repeat('a', 32))->willReturn($recordHash === null ? null : ['browser_hash' => $recordHash]);
-        $browser = $this->createMock(BrowserIdentityInterface::class);
-        $browser->expects($allowed && $record ? $this->once() : $this->never())->method('hash')
-            ->willReturn($browserHash);
-        $browser->expects($this->never())->method('ensure');
         $redirect = $this->createStub(Redirect::class);
         $redirect->method('setPath')->willReturnCallback(function ($path) use ($redirect) {
             $this->path = $path;
@@ -85,10 +76,10 @@ class OptoutTest extends TestCase
         $page = $this->createStub(Page::class);
         $page->method('getConfig')->willReturn($config);
         $pageFactory = $this->createMock(PageFactory::class);
-        $owner = $browserHash !== '' && $recordHash === $browserHash;
-        $showsPage = $allowed && $record && ($owner || ($method === 'GET' && $record->withdrawnAt === null));
+        // every browser with the signed link sees the page; the view model decides what the original browser sees
+        $showsPage = $allowed && $record;
         $pageFactory->expects($showsPage ? $this->once() : $this->never())->method('create')->willReturn($page);
-        return new Index($this->createStub(Context::class), $request, $links, $pageFactory, $redirectFactory, $browser, $store, $validator, $rawFactory);
+        return new Index($this->createStub(Context::class), $request, $links, $pageFactory, $redirectFactory, $validator, $rawFactory);
     }
 
     public function testSignedGetShowsConfirmationWithoutWithdrawing(): void
@@ -109,16 +100,17 @@ class OptoutTest extends TestCase
 
     /** @dataProvider otherBrowsers */
     #[\PHPUnit\Framework\Attributes\DataProvider('otherBrowsers')]
-    public function testConfirmedPostWithdrawsButRedirectsWithoutItsOriginalBrowser(
+    public function testConfirmedPostShowsTheResultAlsoWithoutItsOriginalBrowser(
         string $browserHash,
         ?string $recordHash
     ): void {
+        // e.g. consented on the laptop, withdrew from the email on the phone: the shopper sees it worked
         $record = new Consent('cid', 'some_feature', 1, 'source', 'choice', '2020-01-01 00:00:00',
             '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00');
         $result = $this->controller($record, 'POST', browserHash: $browserHash, recordHash: $recordHash)->execute();
-        $this->assertInstanceOf(Redirect::class, $result);
-        $this->assertSame('', $this->path);
-        $this->assertSame([], $this->page);
+        $this->assertInstanceOf(Page::class, $result);
+        $this->assertSame('Consent withdrawn', $this->page['title']);
+        $this->assertNull($this->path);
     }
 
     public static function otherBrowsers(): array
