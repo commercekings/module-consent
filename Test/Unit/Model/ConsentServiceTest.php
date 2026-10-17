@@ -233,7 +233,7 @@ class ConsentServiceTest extends TestCase
         $this->assertSame([], $this->events);
     }
 
-    public function testCodexFinding2ARequestStillOnItsWayCannotUndoTheWithdrawal(): void
+    public function testARequestStillOnItsWayCannotUndoTheWithdrawal(): void
     {
         // the checkout capture left with the 09:04 "yes" cookie, the visitor said "no" at 09:05, the
         // capture arrives after the withdrawal - and the choice had never been recorded before
@@ -244,7 +244,7 @@ class ConsentServiceTest extends TestCase
         $this->assertSame([], $this->store->rows);
     }
 
-    public function testCodexFinding4AnOldYesOnAnotherDeviceNeverCountsAgain(): void
+    public function testAnOldYesOnAnotherDeviceNeverCountsAgain(): void
     {
         // laptop said yes, the reminder's unsubscribe link was opened on the phone
         $this->choose(['cart_reminder'], '2026-10-10 09:00:00');

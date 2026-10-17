@@ -25,8 +25,8 @@ class ConsentMappingTest extends TestCase
     private AdapterInterface $db;
     private array $categories;
     private array $lifetimes = [9901 => 182, 9902 => 182];
-    private const CONSENTS = 'codex_test_consent_mapping';
-    private const JOBS = 'codex_test_consent_jobs';
+    private const CONSENTS = 'ck_test_consent_mapping';
+    private const JOBS = 'ck_test_consent_jobs';
 
     protected function setUp(): void
     {
