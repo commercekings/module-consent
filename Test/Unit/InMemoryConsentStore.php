@@ -50,7 +50,7 @@ class InMemoryConsentStore extends ConsentStore
         $this->rows[$data['consent_id']] = $data + ['granted_at' => $this->now ?? TestClock::at('12:00:00'), 'withdrawn_at' => null, 'withdrawn_via' => null];
     }
 
-    public function findActive(string $purpose, string $browserHash, int $websiteId): array
+    public function findActive(string $purpose, string $browserHash, int $websiteId, bool $forUpdate = false): array
     {
         return array_values(array_filter($this->rows, fn ($row) => $row['purpose'] === $purpose
             && $row['browser_hash'] === $browserHash && (int)$row['website_id'] === $websiteId && $row['withdrawn_at'] === null));

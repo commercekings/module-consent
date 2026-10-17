@@ -75,17 +75,19 @@ class ConsentStore
         $db->query($sql, array_merge($values, $bind));
     }
 
-    /** Active (not withdrawn) consents of a browser for a purpose on a website. */
-    public function findActive(string $purpose, string $browserHash, int $websiteId): array
+    /**
+     * Active (not withdrawn) consents of a browser for a purpose on a website. $forUpdate: a locking read inside the
+     * caller's transaction - it sees grants committed meanwhile and holds back new ones for this scope until commit.
+     */
+    public function findActive(string $purpose, string $browserHash, int $websiteId, bool $forUpdate = false): array
     {
         $db = $this->resource->getConnection();
-        return $db->fetchAll(
-            $db->select()->from($this->table(), ['consent_id', 'source', 'reference', 'source_time'])
-                ->where('purpose = ?', $purpose)
-                ->where('browser_hash = ?', $browserHash)
-                ->where('website_id = ?', $websiteId)
-                ->where('withdrawn_at IS NULL')
-        );
+        $select = $db->select()->from($this->table(), ['consent_id', 'source', 'reference', 'source_time'])
+            ->where('purpose = ?', $purpose)
+            ->where('browser_hash = ?', $browserHash)
+            ->where('website_id = ?', $websiteId)
+            ->where('withdrawn_at IS NULL');
+        return $db->fetchAll($forUpdate ? $select->forUpdate(true) : $select);
     }
 
     /** Withdrawal mark: choices of this series at or before $sourceTime are never recorded again. */

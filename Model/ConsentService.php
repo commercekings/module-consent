@@ -233,12 +233,16 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
                     $db->commit();
                     return [];
                 }
-                $active = $this->store->findActive($purpose, $browserHash, $websiteId);
-                foreach ($active as $row) {
-                    $marks[] = [(string)$row['source'], (string)$row['reference'], (string)$row['source_time']];
-                }
+                // Marks first: a grant for these choices still on its way now waits for this transaction and is
+                // refused (record() checks the marks in its own statement). Then a locking read: it sees grants
+                // committed in the meantime, so a "yes" recorded a moment ago is withdrawn too.
                 foreach ($marks as [$source, $reference, $sourceTime]) {
                     $this->store->mark($purpose, $browserHash, $websiteId, $source, $reference, $sourceTime);
+                }
+                $active = $this->store->findActive($purpose, $browserHash, $websiteId, true);
+                foreach ($active as $row) {
+                    $this->store->mark($purpose, $browserHash, $websiteId, (string)$row['source'],
+                        (string)$row['reference'], (string)$row['source_time']);
                 }
                 $ids = array_values(array_map(fn (array $row) => (string)$row['consent_id'], $active));
                 $this->store->markWithdrawn($ids, $via);

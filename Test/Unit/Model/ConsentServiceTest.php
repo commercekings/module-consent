@@ -245,6 +245,34 @@ class ConsentServiceTest extends TestCase
         $this->assertSame([], $this->store->rows);
     }
 
+    public function testAYesRecordedWhileTheWithdrawalRunsIsWithdrawnToo(): void
+    {
+        // the checkout's subscribe call records the 09:04 "yes" for the first time while "Reject" (09:05) is being
+        // written: the withdrawal writes its marks first and only then reads the active consents (FOR UPDATE)
+        $this->choose(['cart_reminder'], TestClock::at('09:04:00'));
+        $this->service()->getCurrent('cart_reminder');
+        $late = array_values($this->store->rows)[0];
+        $db = $this->store->db;
+        $this->store = new class extends InMemoryConsentStore {
+            public ?array $late = null;
+            public function mark(string $purpose, string $browserHash, int $websiteId, string $source, string $reference, string $sourceTime): void
+            {
+                if ($this->late !== null) {
+                    $this->rows[$this->late['consent_id']] = $this->late; // committed just before the locking read
+                    $this->late = null;
+                }
+                parent::mark($purpose, $browserHash, $websiteId, $source, $reference, $sourceTime);
+            }
+        };
+        $this->store->late = $late;
+        $this->store->db = $db;
+        $this->choose([], TestClock::at('09:05:00'));
+        $this->service()->withdrawCurrent('cart_reminder', 'banner');
+        $this->assertNotNull($this->store->rows[$late['consent_id']]['withdrawn_at'] ?? null, 'no reminder after the "no"');
+        $this->choose(['cart_reminder'], TestClock::at('09:04:00'));
+        $this->assertNull($this->service()->getCurrent('cart_reminder'));
+    }
+
     public function testAnOldYesOnAnotherDeviceNeverCountsAgain(): void
     {
         // laptop said yes, the reminder's unsubscribe link was opened on the phone
