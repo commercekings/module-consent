@@ -41,6 +41,8 @@ Without a selected source nothing has consent: the module fails closed.
 - It is **valid** while not withdrawn or expired and still under today's source, banner revision and purpose terms.
   Raising either revision asks everyone again.
 - A **withdrawal** works in the banner or through an email link.
+- **Signing in or out doesn't change it.** The consent stays with the browser, so on a shared computer the next
+  visitor sees the previous choice until they change it in the banner.
 
 ## Settings
 
