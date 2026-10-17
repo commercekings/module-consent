@@ -51,13 +51,14 @@ jobs:
       - name: Check out this package
         uses: actions/checkout@v7
         with:
-          path: packages/self
+          # side by side under the repository names, as the JavaScript test harnesses expect
+          path: packages/${{ github.event.repository.name }}
           persist-credentials: false
       - name: Check out the CommerceKings packages it can depend on
         shell: bash
         run: |
           set -euo pipefail
-          self=$(jq -r .name packages/self/composer.json)
+          self=$(jq -r .name "packages/${{ github.event.repository.name }}/composer.json")
           for repo in module-core module-consent module-consent-defaults module-consent-vanilla module-notification; do
             [ "commercekings/$repo" = "$self" ] && continue
             git clone --quiet --depth 1 "https://github.com/commercekings/$repo.git" "packages/$repo"
@@ -90,10 +91,10 @@ jobs:
           composer config minimum-stability dev
           composer config prefer-stable true
           composer config --no-plugins allow-plugins true
-          self=$(jq -r .name ../packages/self/composer.json)
+          self=$(jq -r .name "../packages/${{ github.event.repository.name }}/composer.json")
           extra=()
           # a feature that needs a consent banner gets the CommerceKings banner
-          if jq -e '.require["commercekings/consent-source"]' ../packages/self/composer.json >/dev/null; then
+          if jq -e '.require["commercekings/consent-source"]' "../packages/${{ github.event.repository.name }}/composer.json" >/dev/null; then
             extra+=("commercekings/module-consent-vanilla:@dev")
           fi
           composer require --no-update --no-interaction "$self:@dev" "${extra[@]}"
@@ -103,7 +104,7 @@ jobs:
         working-directory: magento
         run: vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist --no-extensions --colors=never "vendor/$PACKAGE/Test/Unit"
       - name: JavaScript tests
-        if: hashFiles('packages/self/Test/JavaScript/*.test.cjs') != ''
+        if: hashFiles(format('packages/{0}/Test/JavaScript/*.test.cjs', github.event.repository.name)) != ''
         working-directory: magento
         shell: bash
         run: MAGENTO_ROOT="$PWD" node --test vendor/$PACKAGE/Test/JavaScript/*.test.cjs
