@@ -101,7 +101,7 @@ jobs:
           echo "PACKAGE=$self" >> "$GITHUB_ENV"
       - name: Unit tests
         working-directory: magento
-        run: vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist --colors=never "vendor/$PACKAGE/Test/Unit"
+        run: vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist --no-extensions --colors=never "vendor/$PACKAGE/Test/Unit"
       - name: JavaScript tests
         if: hashFiles('packages/self/Test/JavaScript/*.test.cjs') != ''
         working-directory: magento
