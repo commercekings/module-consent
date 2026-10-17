@@ -43,6 +43,8 @@ Without a selected source nothing has consent: the module fails closed.
 - A **withdrawal** works in the banner or through an email link.
 - **Signing in or out doesn't change it.** The consent stays with the browser, so on a shared computer the next
   visitor sees the previous choice until they change it in the banner.
+- **Independent of Magento's customer data:** consents belong to a browser, not an account, so deleting a customer
+  doesn't delete them; they expire with *Record retention*.
 
 ## Settings
 
