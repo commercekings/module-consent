@@ -42,3 +42,68 @@ jobs:
             echo 'Development files or credentials found in distribution.' >&2
             exit 1
           fi
+
+  tests:
+    name: Unit and JavaScript tests (Magento 2.4.9, PHP 8.5)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out this package
+        uses: actions/checkout@v7
+        with:
+          path: packages/self
+          persist-credentials: false
+      - name: Check out the CommerceKings packages it can depend on
+        shell: bash
+        run: |
+          set -euo pipefail
+          self=$(jq -r .name packages/self/composer.json)
+          for repo in module-core module-consent module-consent-defaults module-consent-vanilla module-notification; do
+            [ "commercekings/$repo" = "$self" ] && continue
+            git clone --quiet --depth 1 "https://github.com/commercekings/$repo.git" "packages/$repo"
+          done
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          coverage: none
+          extensions: bcmath, ctype, curl, dom, gd, hash, iconv, intl, mbstring, openssl, pdo_mysql, simplexml, soap, sockets, sodium, xsl, zip
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Cache Composer downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer/files
+          key: composer-magento-2.4.9-${{ github.sha }}
+          restore-keys: composer-magento-2.4.9-
+      - name: Install Magento 2.4.9 with this package (Mage-OS mirror, no credentials, no database)
+        shell: bash
+        run: |
+          set -euo pipefail
+          composer create-project --no-install --no-interaction \
+            --repository-url=https://mirror.mage-os.org/ magento/project-community-edition=2.4.9 magento
+          cd magento
+          composer config --unset repositories.0
+          composer config repositories.mageos composer https://mirror.mage-os.org/
+          composer config repositories.commercekings '{"type": "path", "url": "../packages/*", "options": {"symlink": true}}'
+          composer config minimum-stability dev
+          composer config prefer-stable true
+          composer config --no-plugins allow-plugins true
+          self=$(jq -r .name ../packages/self/composer.json)
+          extra=()
+          # a feature that needs a consent banner gets the CommerceKings banner
+          if jq -e '.require["commercekings/consent-source"]' ../packages/self/composer.json >/dev/null; then
+            extra+=("commercekings/module-consent-vanilla:@dev")
+          fi
+          composer require --no-update --no-interaction "$self:@dev" "${extra[@]}"
+          composer install --no-interaction --no-progress
+          echo "PACKAGE=$self" >> "$GITHUB_ENV"
+      - name: Unit tests
+        working-directory: magento
+        run: vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist --colors=never "vendor/$PACKAGE/Test/Unit"
+      - name: JavaScript tests
+        if: hashFiles('packages/self/Test/JavaScript/*.test.cjs') != ''
+        working-directory: magento
+        shell: bash
+        run: MAGENTO_ROOT="$PWD" node --test vendor/$PACKAGE/Test/JavaScript/*.test.cjs
