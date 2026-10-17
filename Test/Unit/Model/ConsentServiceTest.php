@@ -149,6 +149,15 @@ class ConsentServiceTest extends TestCase
         $this->assertCount(1, $this->store->rows);
     }
 
+    public function testAnExpiryPastTheDatabaseLimitIsCappedNotStoredAsExpired(): void
+    {
+        // a TIMESTAMP ends in January 2038; past it the database would store an expiry that is already over
+        $this->lifetimeDays = 5000;
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
+        $consent = $this->service()->getCurrent('cart_reminder');
+        $this->assertSame('2038-01-19 03:14:07', $consent->expiresAt);
+    }
+
     public function testFirstUseRecordsTheChoiceOnceWithAServerIssuedId(): void
     {
         $this->choose(['cart_reminder'], TestClock::at('09:00:00'));

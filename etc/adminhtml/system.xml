@@ -55,8 +55,8 @@
                 </field>
                 <field id="cookie_lifetime_days" translate="label comment" type="text" sortOrder="70" showInDefault="1" showInWebsite="1">
                     <label>Consent lifetime (days)</label>
-                    <comment>Lowering limits consent; raising never extends its original expiry.</comment>
-                    <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                    <comment>1 to 730 (24 months). EU guidance: about 182 (6 months). USA (California): at least 365, so a rejection is not asked again within 12 months. Lowering limits consent; raising never extends its original expiry.</comment>
+                    <validate>required-entry validate-digits validate-digits-range digits-range-1-730</validate>
                     <depends>
                         <field id="source" negative="1"/>
                     </depends>

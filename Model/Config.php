@@ -12,6 +12,9 @@ use Magento\Store\Model\ScopeInterface;
 /** Admin: Stores > Configuration > CommerceKings > Consent. */
 class Config implements SourceConfigInterface, BannerSettingsInterface
 {
+    /** 24 months - the longest an EU authority accepts for cookie consent (Spain's AEPD); the admin field accepts 1 to this. */
+    public const MAX_LIFETIME_DAYS = 730;
+
     private const PREFIX = 'commercekings_consent/general/';
 
     public function __construct(
@@ -67,9 +70,10 @@ class Config implements SourceConfigInterface, BannerSettingsInterface
         return (string)max(1, (int)$this->value('revision', $websiteId));
     }
 
+    /** 1 to MAX_LIFETIME_DAYS: a longer value (e.g. a typo) is capped, not stored as an out-of-range expiry. */
     public function getCookieLifetimeDays(?int $websiteId = null): int
     {
-        return max(1, (int)$this->value('cookie_lifetime_days', $websiteId));
+        return min(self::MAX_LIFETIME_DAYS, max(1, (int)$this->value('cookie_lifetime_days', $websiteId)));
     }
 
     /** Consent records are deleted this many days after expiry / withdrawal; marks have a lifetime minimum. */

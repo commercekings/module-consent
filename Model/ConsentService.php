@@ -22,6 +22,9 @@ use Psr\Log\LoggerInterface;
  */
 class ConsentService implements ConsentInterface, ConsentGuardInterface
 {
+    /** The last second a MySQL/MariaDB TIMESTAMP column can hold (UTC). */
+    private const LAST_TIMESTAMP = '2038-01-19 03:14:07';
+
     public const EVENT_WITHDRAWN = 'commercekings_consent_withdrawn';
 
     /** A choice dated further ahead than this (seconds) is a wrong clock or an edited cookie - no consent. */
@@ -331,7 +334,9 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
 
     private function maximumExpiry(string $givenAt, int $websiteId): string
     {
-        return gmdate('Y-m-d H:i:s', (int)strtotime($givenAt . ' UTC') + $this->config->getCookieLifetimeDays($websiteId) * 86400);
+        // expires_at is a TIMESTAMP: past its last second the database would store an already expired 0000-00-00
+        return min(self::LAST_TIMESTAMP, gmdate('Y-m-d H:i:s',
+            (int)strtotime($givenAt . ' UTC') + $this->config->getCookieLifetimeDays($websiteId) * 86400));
     }
 
     private function websiteId(): int

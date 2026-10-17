@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Requires Magento 2.4.4 or later (`magento/framework ^103.0.4`): Magento 2.4.0–2.4.3 do not run on PHP 8.1.
+- Consent lifetime is 1 to 730 days (24 months, the longest an EU authority accepts; admin validation and in code),
+  and an expiry is capped at the last TIMESTAMP second (2038-01-19), so no consent is stored already expired.
 - A withdrawal that finds another one for the same browser still running (a double click) answers 503 on the
   banner endpoint and for one-click POSTs (both retry), and returns the email confirmation page with "Please try
   again" - instead of Magento's error page.

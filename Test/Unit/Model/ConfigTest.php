@@ -68,6 +68,8 @@ class ConfigTest extends TestCase
         $this->assertSame(90, $config->getCookieLifetimeDays());
         $this->assertSame('1', $this->config([])->getRevision(), 'never below 1');
         $this->assertSame(1, $this->config([])->getCookieLifetimeDays());
+        $this->assertSame(730, $this->config(['commercekings_consent/general/cookie_lifetime_days' => '5000'])
+            ->getCookieLifetimeDays(), 'at most 24 months, e.g. after a typo');
     }
 
     public function testRequiredPurposesAreAlwaysRecordedOptionalOnesOnlyWhenTicked(): void
