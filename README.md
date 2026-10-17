@@ -1,6 +1,4 @@
-<a href="https://commercekings.net"><img align="right" width="152" src=".github/commercekings.svg" alt="Built by CommerceKings. Ready to sell more? Talk to us"></a>
-
-# Provable Consent
+# <a href="https://commercekings.net"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/commercekings/module-consent/main/.github/commercekings-dark.svg"><img align="right" width="152" src="https://raw.githubusercontent.com/commercekings/module-consent/main/.github/commercekings-light.svg" alt="Built by CommerceKings. Ready to sell more? Talk to us"></picture></a>Provable Consent
 
 Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
