@@ -7,7 +7,7 @@ namespace CommerceKings\Consent\Test\Unit;
  * Test dates relative to the real clock, so tests do not expire when the calendar passes a fixed date.
  * Day 0 is seven days ago (UTC), fixed for the whole run.
  */
-final class TestClock
+class TestClock
 {
     private static ?string $day0 = null;
 
