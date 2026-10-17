@@ -1,8 +1,6 @@
-<a href="https://commercekings.net"><img align="right" src="https://img.shields.io/badge/Built%20by-CommerceKings-F26322?labelColor=1F1F1F" alt="Built by CommerceKings – expert Magento engineering"></a>
+<a href="https://commercekings.net"><img align="right" width="152" src=".github/commercekings.svg" alt="Built by CommerceKings. Ready to sell more? Talk to us"></a>
 
 # Provable Consent
-
-<sub>Expert Magento engineering. Ready to sell more? [Talk to us](https://commercekings.net)</sub>
 
 Works with Magento 2.4+ · Luma and Hyvä · PHP 8.1–8.5
 
