@@ -12,7 +12,8 @@ class InMemoryConsentStore extends ConsentStore
     public array $rows = [];
     /** @var array<string, string> mark key => source_time */
     public array $marks = [];
-    public string $now = '2026-10-10 12:00:00';
+    /** Server time of granted_at/withdrawn_at; TestClock day 0 at noon unless a test sets it. */
+    public ?string $now = null;
     public \Magento\Framework\DB\Adapter\AdapterInterface $db;
 
     public function __construct()
@@ -46,7 +47,7 @@ class InMemoryConsentStore extends ConsentStore
         if (($mark !== null && (!$explicit || $mark >= $data['source_time'])) || $this->find($key)) {
             return;
         }
-        $this->rows[$data['consent_id']] = $data + ['granted_at' => $this->now, 'withdrawn_at' => null, 'withdrawn_via' => null];
+        $this->rows[$data['consent_id']] = $data + ['granted_at' => $this->now ?? TestClock::at('12:00:00'), 'withdrawn_at' => null, 'withdrawn_via' => null];
     }
 
     public function findActive(string $purpose, string $browserHash, int $websiteId): array
@@ -66,7 +67,7 @@ class InMemoryConsentStore extends ConsentStore
         $count = 0;
         foreach ($consentIds as $id) {
             if (isset($this->rows[$id]) && $this->rows[$id]['withdrawn_at'] === null) {
-                $this->rows[$id]['withdrawn_at'] = $this->now;
+                $this->rows[$id]['withdrawn_at'] = $this->now ?? TestClock::at('12:00:00');
                 $this->rows[$id]['withdrawn_via'] = $via;
                 $count++;
             }

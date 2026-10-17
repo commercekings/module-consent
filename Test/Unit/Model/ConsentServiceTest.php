@@ -17,6 +17,7 @@ use CommerceKings\Consent\Model\WithdrawalCleanup;
 use Magento\Framework\Lock\LockManagerInterface;
 use Psr\Log\NullLogger;
 use CommerceKings\Consent\Test\Unit\InMemoryConsentStore;
+use CommerceKings\Consent\Test\Unit\TestClock;
 use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\Event\ManagerInterface;
 use Magento\Framework\Math\Random;
@@ -106,7 +107,7 @@ class ConsentServiceTest extends TestCase
 
     public function testUnavailableScopeLockLeavesConsentAndCleanupUntouched(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $id = $this->service()->getCurrent('cart_reminder')->consentId;
         $before = $this->store->rows;
         $db = $this->createMock(AdapterInterface::class);
@@ -131,7 +132,7 @@ class ConsentServiceTest extends TestCase
 
     public function testGrantPersistenceFailureCannotAcknowledgePermissionAndCanBeRetried(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $this->store = $this->createPartialMock(InMemoryConsentStore::class, ['record']);
         $error = new \RuntimeException('Storage unavailable');
         $this->store->expects($this->once())->method('record')->willThrowException($error);
@@ -150,13 +151,13 @@ class ConsentServiceTest extends TestCase
 
     public function testFirstUseRecordsTheChoiceOnceWithAServerIssuedId(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $first = $this->service()->getCurrent('cart_reminder');
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $first->consentId);
-        $this->assertSame(['cart_reminder', 1, 'banner', 'cid-1', '2026-10-10 09:00:00', '1', '1'], [
+        $this->assertSame(['cart_reminder', 1, 'banner', 'cid-1', TestClock::at('09:00:00'), '1', '1'], [
             $first->purpose, $first->websiteId, $first->source, $first->reference, $first->sourceTime, $first->bannerRevision, $first->termsRevision,
         ]);
-        $this->assertSame('2027-04-10 09:00:00', $first->expiresAt, 'source time + source cookie lifetime when the choice has no expiry');
+        $this->assertSame(TestClock::at('09:00:00', 182), $first->expiresAt, 'source time + source cookie lifetime when the choice has no expiry');
         $this->assertSame($first->consentId, $this->service()->getCurrent('cart_reminder')->consentId, 'same choice, same consent');
         $this->assertCount(1, $this->store->rows);
         $this->assertTrue($this->service()->isValid($first->consentId));
@@ -164,9 +165,9 @@ class ConsentServiceTest extends TestCase
 
     public function testEverySavedChoiceIsItsOwnConsentAction(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $first = $this->service()->getCurrent('cart_reminder');
-        $this->choose(['cart_reminder', 'analytics'], '2026-10-10 10:00:00');
+        $this->choose(['cart_reminder', 'analytics'], TestClock::at('10:00:00'));
         $this->assertNotSame($first->consentId, $this->service()->getCurrent('cart_reminder')->consentId);
     }
 
@@ -174,7 +175,7 @@ class ConsentServiceTest extends TestCase
     #[\PHPUnit\Framework\Attributes\DataProvider('noConsent')]
     public function testFailsClosed(callable $setup): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $setup($this);
         $this->assertNull($this->service()->getCurrent('cart_reminder'));
         $this->assertSame([], $this->store->rows, 'nothing recorded');
@@ -183,12 +184,12 @@ class ConsentServiceTest extends TestCase
     public static function noConsent(): array
     {
         return [
-            'purpose not accepted' => [fn (self $t) => $t->choose(['analytics'], '2026-10-10 09:00:00')],
+            'purpose not accepted' => [fn (self $t) => $t->choose(['analytics'], TestClock::at('09:00:00'))],
             'no choice in the source' => [fn (self $t) => $t->choice = null],
             'no source chosen / installed' => [fn (self $t) => $t->sourceInstalled = false],
-            'choice without identity' => [fn (self $t) => $t->choose(['cart_reminder'], '2026-10-10 09:00:00', '')],
+            'choice without identity' => [fn (self $t) => $t->choose(['cart_reminder'], TestClock::at('09:00:00'), '')],
             'choice without time' => [fn (self $t) => $t->choose(['cart_reminder'], '')],
-            'choice for another banner revision' => [fn (self $t) => $t->choose(['cart_reminder'], '2026-10-10 09:00:00', 'cid-1', '0')],
+            'choice for another banner revision' => [fn (self $t) => $t->choose(['cart_reminder'], TestClock::at('09:00:00'), 'cid-1', '0')],
             'no categories configured' => [fn (self $t) => $t->categories = []],
             'purpose no longer mapped' => [fn (self $t) => $t->categories = ['statistics' => ['purposes' => ['analytics']]]],
         ];
@@ -196,15 +197,15 @@ class ConsentServiceTest extends TestCase
 
     public function testUndeclaredPurposeIsNeverConsented(): void
     {
-        $this->choose(['newsletter'], '2026-10-10 09:00:00');
+        $this->choose(['newsletter'], TestClock::at('09:00:00'));
         $this->assertNull($this->service()->getCurrent('newsletter'));
     }
 
     public function testBannerWithdrawalPersistsThenFiresTheEventWithTheConsentIds(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $id = $this->service()->getCurrent('cart_reminder')->consentId;
-        $this->choose([], '2026-10-10 09:05:00');
+        $this->choose([], TestClock::at('09:05:00'));
         $this->assertSame([$id], $this->service()->withdrawCurrent('cart_reminder', 'banner'));
         $this->assertFalse($this->service()->isValid($id));
         $this->assertSame('banner', $this->service()->get($id)->withdrawnVia);
@@ -215,7 +216,7 @@ class ConsentServiceTest extends TestCase
 
     public function testWithdrawalWhileTheSourceStillSaysYesDoesNothing(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $id = $this->service()->getCurrent('cart_reminder')->consentId;
         $this->assertSame([], $this->service()->withdrawCurrent('cart_reminder', 'banner'), 'forged call');
         $this->assertTrue($this->service()->isValid($id));
@@ -225,7 +226,7 @@ class ConsentServiceTest extends TestCase
     public function testNoCurrentChoiceWithdrawsNothing(): void
     {
         // e.g. the banner revision was raised: the old consent is invalid, but nobody withdrew it
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $id = $this->service()->getCurrent('cart_reminder')->consentId;
         $this->choice = null;
         $this->assertSame([], $this->service()->withdrawCurrent('cart_reminder', 'banner'));
@@ -237,9 +238,9 @@ class ConsentServiceTest extends TestCase
     {
         // the checkout capture left with the 09:04 "yes" cookie, the visitor said "no" at 09:05, the
         // capture arrives after the withdrawal - and the choice had never been recorded before
-        $this->choose([], '2026-10-10 09:05:00');
+        $this->choose([], TestClock::at('09:05:00'));
         $this->service()->withdrawCurrent('cart_reminder', 'banner');
-        $this->choose(['cart_reminder'], '2026-10-10 09:04:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:04:00'));
         $this->assertNull($this->service()->getCurrent('cart_reminder'));
         $this->assertSame([], $this->store->rows);
     }
@@ -247,7 +248,7 @@ class ConsentServiceTest extends TestCase
     public function testAnOldYesOnAnotherDeviceNeverCountsAgain(): void
     {
         // laptop said yes, the reminder's unsubscribe link was opened on the phone
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $id = $this->service()->getCurrent('cart_reminder')->consentId;
         $this->service()->withdraw($id, 'email');
         // the laptop still has the same "yes" cookie - no matter how often it asks
@@ -255,17 +256,17 @@ class ConsentServiceTest extends TestCase
         $this->assertNull($this->service()->getCurrent('cart_reminder'));
         $this->assertCount(1, $this->store->rows);
         // a new choice in the banner (switching the category on again) is a new consent
-        $this->choose(['cart_reminder'], '2026-10-10 10:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('10:00:00'));
         $this->assertNotNull($this->service()->grantCurrent('cart_reminder'));
     }
 
     public function testWithdrawingOneConsentWithdrawsEveryActiveOneOfThatBrowserAndPurpose(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $first = $this->service()->getCurrent('cart_reminder')->consentId;
-        $this->choose(['cart_reminder', 'analytics'], '2026-10-10 10:00:00');
+        $this->choose(['cart_reminder', 'analytics'], TestClock::at('10:00:00'));
         $second = $this->service()->getCurrent('cart_reminder')->consentId;
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00', 'cid-1');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'), 'cid-1');
         $this->browserHash = 'other-browser';
         $other = $this->service()->getCurrent('cart_reminder')->consentId;
 
@@ -277,7 +278,7 @@ class ConsentServiceTest extends TestCase
 
     public function testRevisionsAndExpiryEndValidity(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $id = $this->service()->getCurrent('cart_reminder')->consentId;
         $this->bannerRevision = '2';
         $this->assertFalse($this->service()->isValid($id), 'banner revision raised: every purpose asks again');
@@ -296,14 +297,14 @@ class ConsentServiceTest extends TestCase
 
     public function testSourceExpiryIsUsedWhenGiven(): void
     {
-        $this->choice = new SourceChoice('cid-1', '2026-10-10 09:00:00', '1', ['cart_reminder'], '2026-12-01 00:00:00');
-        $this->assertSame('2026-12-01 00:00:00', $this->service()->getCurrent('cart_reminder')->expiresAt);
+        $this->choice = new SourceChoice('cid-1', TestClock::at('09:00:00'), '1', ['cart_reminder'], TestClock::at('00:00:00', 52));
+        $this->assertSame(TestClock::at('00:00:00', 52), $this->service()->getCurrent('cart_reminder')->expiresAt);
     }
 
     public function testSourceCookieCannotExtendConsentBeyondConfiguredLifetime(): void
     {
-        $this->choice = new SourceChoice('cid-1', '2026-10-10 09:00:00', '1', ['cart_reminder'], '2030-01-01 00:00:00');
-        $this->assertSame('2027-04-10 09:00:00', $this->service()->getCurrent('cart_reminder')->expiresAt);
+        $this->choice = new SourceChoice('cid-1', TestClock::at('09:00:00'), '1', ['cart_reminder'], TestClock::at('00:00:00', 1000));
+        $this->assertSame(TestClock::at('09:00:00', 182), $this->service()->getCurrent('cart_reminder')->expiresAt);
     }
 
     public function testReducingLifetimeInvalidatesOlderPermissionWithoutMutatingEvidence(): void
@@ -345,7 +346,7 @@ class ConsentServiceTest extends TestCase
 
     public function testRemovingMappingInvalidatesExistingConsentWithoutWithdrawingIt(): void
     {
-        $this->choose(['cart_reminder', 'analytics'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder', 'analytics'], TestClock::at('09:00:00'));
         $service = $this->service();
         $reminder = $service->getCurrent('cart_reminder')->consentId;
         $analytics = $service->getCurrent('analytics')->consentId;
@@ -362,7 +363,7 @@ class ConsentServiceTest extends TestCase
 
     public function testRemovingAllSiteCategoriesInvalidatesExistingConsentWithSourceStillInstalled(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $service = $this->service();
         $id = $service->getCurrent('cart_reminder')->consentId;
         $this->categories = [];
@@ -373,7 +374,7 @@ class ConsentServiceTest extends TestCase
 
     public function testAnyRemainingCategoryMappingKeepsExistingConsentValid(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $service = $this->service();
         $id = $service->getCurrent('cart_reminder')->consentId;
         $this->categories = ['other' => ['purposes' => ['cart_reminder']]];
@@ -384,9 +385,9 @@ class ConsentServiceTest extends TestCase
     {
         // opted out by email; on the laptop the visitor later changes ONLY analytics - the banner saves
         // again (new time), personalization still on from before: that is no new choice for the reminder
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $this->service()->withdraw($this->service()->getCurrent('cart_reminder')->consentId, 'email');
-        $this->choose(['cart_reminder', 'analytics'], '2026-10-10 11:00:00');
+        $this->choose(['cart_reminder', 'analytics'], TestClock::at('11:00:00'));
         $this->assertNull($this->service()->getCurrent('cart_reminder'));
         // switching the reminder category on again is (js/consent/provider.js -> /ckconsent/grant)
         $this->assertNotNull($granted = $this->service()->grantCurrent('cart_reminder'));
@@ -395,18 +396,18 @@ class ConsentServiceTest extends TestCase
 
     public function testExplicitGrantStillRefusesChoicesFromBeforeTheWithdrawal(): void
     {
-        $this->choose([], '2026-10-10 09:05:00');
+        $this->choose([], TestClock::at('09:05:00'));
         $this->service()->withdrawCurrent('cart_reminder', 'banner');
-        $this->choose(['cart_reminder'], '2026-10-10 09:04:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:04:00'));
         $this->assertNull($this->service()->grantCurrent('cart_reminder'));
     }
 
     public function testAnotherSeriesIsANewChoice(): void
     {
         // cookies cleared, the banner asked again and the visitor said yes: new consentId
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $this->service()->withdraw($this->service()->getCurrent('cart_reminder')->consentId, 'email');
-        $this->choose(['cart_reminder'], '2026-10-10 12:00:00', 'cid-2');
+        $this->choose(['cart_reminder'], TestClock::at('12:00:00'), 'cid-2');
         $this->assertNotNull($this->service()->getCurrent('cart_reminder'));
     }
 
@@ -428,7 +429,7 @@ class ConsentServiceTest extends TestCase
 
     public function testLifetimeRunsFromTheEarlierOfChoiceAndServerTime(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $id = $this->service()->getCurrent('cart_reminder')->consentId;
         // the banner claims a recent time, but the server recorded it long ago
         $this->store->rows[$id]['source_time'] = gmdate('Y-m-d H:i:s');
@@ -438,19 +439,19 @@ class ConsentServiceTest extends TestCase
 
     public function testEachConsentPointsToTheWordingShownWhenItWasRecorded(): void
     {
-        $this->choose(['cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'));
         $first = $this->service()->getCurrent('cart_reminder');
         $this->assertSame('wording-1', $first->snapshotHash);
         $this->wordingHash = 'wording-2';
         $this->assertSame('wording-1', $this->service()->getCurrent('cart_reminder')->snapshotHash, 'an existing consent keeps its wording');
-        $this->choose(['cart_reminder'], '2026-10-10 10:00:00');
+        $this->choose(['cart_reminder'], TestClock::at('10:00:00'));
         $this->assertSame('wording-2', $this->service()->getCurrent('cart_reminder')->snapshotHash, 'a new choice gets the new wording');
     }
 
     public function testAnUnrecordedPurposeStoresNothingAndIsNeverValidOnTheServer(): void
     {
         $this->unrecorded = ['analytics'];
-        $this->choose(['analytics', 'cart_reminder'], '2026-10-10 09:00:00');
+        $this->choose(['analytics', 'cart_reminder'], TestClock::at('09:00:00'));
         $this->assertNull($this->service()->getCurrent('analytics'));
         $this->assertNull($this->service()->grantCurrent('analytics'));
         $this->assertNotNull($this->service()->getCurrent('cart_reminder'), 'a recorded purpose next to it still works');
@@ -475,7 +476,7 @@ class ConsentServiceTest extends TestCase
 
     public function testRecordsOfAPurposeNoLongerRecordedStopCounting(): void
     {
-        $this->choose(['analytics'], '2026-10-10 09:00:00');
+        $this->choose(['analytics'], TestClock::at('09:00:00'));
         $consent = $this->service()->getCurrent('analytics');
         $this->assertTrue($this->service()->isValid($consent->consentId));
         $this->unrecorded = ['analytics'];
