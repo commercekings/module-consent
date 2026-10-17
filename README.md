@@ -2,7 +2,7 @@
 
 Works with Magento 2.4.4+ · Luma and Hyvä · PHP 8.1–8.5
 
-[![License](https://badgen.net/github/license/commercekings/module-consent)](LICENSE) [![Release](https://badgen.net/github/release/commercekings/module-consent)](https://github.com/commercekings/module-consent/releases) [![Checks](https://badgen.net/github/checks/commercekings/module-consent/main?label=checks)](https://github.com/commercekings/module-consent/actions)
+[![License](https://badgen.net/github/license/commercekings/module-consent)](LICENSE) [![Release](https://badgen.net/github/release/commercekings/module-consent)](https://github.com/commercekings/module-consent/releases) [![Checks](https://github.com/commercekings/module-consent/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/commercekings/module-consent/actions/workflows/checks.yml)
 
 **Most banners only set a cookie. This one keeps the proof** – recorded on the server, withdrawn reliably, exported as
 evidence.
