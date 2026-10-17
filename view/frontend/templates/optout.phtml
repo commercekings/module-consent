@@ -5,7 +5,10 @@
 $viewModel = $block->getData('view_model');
 ?>
 <div class="ck-optout" style="max-width: 560px; margin: 20px auto 40px; text-align: center;">
-    <?php if (!$viewModel->hasWithdrawnConsent()): ?>
+    <?php if (!$viewModel->isValidLink()): ?>
+    <p><?= $escaper->escapeHtml(__('This link has expired, so nothing has changed. Your email preferences stay as they are.')) ?></p>
+    <p><?= $escaper->escapeHtml(__('You can change them at any time with "Cookie settings" in the footer of our shop.')) ?></p>
+    <?php elseif (!$viewModel->hasWithdrawnConsent()): ?>
     <?php if ($viewModel->isOriginalBrowser()): ?>
     <p><?= $escaper->escapeHtml(__('Withdraw your consent for "%purpose"?', ['purpose' => $viewModel->getPurposeLabel()])) ?></p>
     <?php else: ?>
@@ -21,7 +24,7 @@ $viewModel = $block->getData('view_model');
     <p><?= $escaper->escapeHtml(__('Your consent for "%purpose" has been withdrawn.', ['purpose' => $viewModel->getPurposeLabel()])) ?></p>
     <p><?= $escaper->escapeHtml(__('You can change your preferences in the cookie settings.')) ?></p>
     <?php endif; ?>
-    <?php if ($viewModel->canConfirm()): ?>
+    <?php if ($viewModel->isValidLink() && $viewModel->canConfirm()): ?>
     <form id="ckconsent-optout-form" action="<?= $escaper->escapeUrl($block->getUrl('ckconsent/optout')) ?>" method="post">
         <?= $block->getBlockHtml('formkey') ?>
         <input type="hidden" name="c" value="<?= $escaper->escapeHtmlAttr($viewModel->getConsentId()) ?>"/>

@@ -36,6 +36,14 @@ class Withdrawal implements ArgumentInterface
         return $consent ? $this->purposes->getLabel($consent->purpose) : '';
     }
 
+    /** False for a link that is no longer valid: an old encryption key, a consent already removed, a damaged URL. */
+    public function isValidLink(): bool
+    {
+        $id = $this->request->getParam('c');
+        $token = $this->request->getParam('t');
+        return is_string($id) && is_string($token) && $this->links->getConsent($id, $token) !== null;
+    }
+
     public function hasWithdrawnConsent(): bool
     {
         $consent = $this->links->getConsent(

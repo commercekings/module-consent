@@ -60,24 +60,25 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
         $token = $this->request->getParam('t');
         $post = $this->request->getMethod() === 'POST';
         // Magento also routes HEAD to GET actions. Header inspection must never render interactive content.
-        if (!in_array($this->request->getMethod(), ['GET', 'POST'], true) || !is_string($id) || !is_string($token)
-            || !preg_match('/^[a-f0-9]{32}$/D', $id) || !preg_match('/^[a-f0-9]{64}$/D', $token)
-        ) {
+        if (!in_array($this->request->getMethod(), ['GET', 'POST'], true)) {
             return $this->redirectFactory->create()->setPath('');
         }
         $key = $this->request->getParam('form_key');
         if ($post && (!is_string($key) || !$this->formKeyValidator->validate($this->request))) {
             return $this->redirectFactory->create()->setPath('');
         }
-        $consent = $post ? $this->links->withdraw($id, $token) : $this->links->getConsent($id, $token);
-        if (!$consent) {
-            return $this->redirectFactory->create()->setPath('');
-        }
+        $wellFormed = is_string($id) && is_string($token)
+            && preg_match('/^[a-f0-9]{32}$/D', $id) && preg_match('/^[a-f0-9]{64}$/D', $token);
+        $consent = !$wellFormed ? null : ($post ? $this->links->withdraw($id, $token) : $this->links->getConsent($id, $token));
         // Any browser with the signed link sees the result; only the original browser sees the purpose and has its
-        // banner synced (Withdrawal view model).
+        // banner synced (Withdrawal view model). A link that no longer verifies (an old encryption key, a consent
+        // already cleaned up, a damaged URL) changes nothing and says so, with where to change preferences.
         $page = $this->pageFactory->create();
-        $page->getConfig()->getTitle()->set((string)($post || $consent->withdrawnAt !== null
-            ? __('Consent withdrawn') : __('Withdraw consent')));
+        $page->getConfig()->getTitle()->set((string)match (true) {
+            $consent === null => __('Link expired'),
+            $post || $consent->withdrawnAt !== null => __('Consent withdrawn'),
+            default => __('Withdraw consent'),
+        });
         $page->getConfig()->setRobots('NOINDEX,NOFOLLOW');
         $page->setHeader('Referrer-Policy', 'no-referrer', true);
         return $page;

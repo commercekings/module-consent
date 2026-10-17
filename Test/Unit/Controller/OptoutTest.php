@@ -76,8 +76,9 @@ class OptoutTest extends TestCase
         $page = $this->createStub(Page::class);
         $page->method('getConfig')->willReturn($config);
         $pageFactory = $this->createMock(PageFactory::class);
-        // every browser with the signed link sees the page; the view model decides what the original browser sees
-        $showsPage = $allowed && $record;
+        // every browser sees a page - the result, or that the link is no longer valid; never HEAD or a bad form key
+        $showsPage = !$machine && in_array($method, ['GET', 'POST'], true)
+            && ($method !== 'POST' || (is_string($key) && $keyValid));
         $pageFactory->expects($showsPage ? $this->once() : $this->never())->method('create')->willReturn($page);
         return new Index($this->createStub(Context::class), $request, $links, $pageFactory, $redirectFactory, $validator, $rawFactory);
     }
@@ -91,11 +92,15 @@ class OptoutTest extends TestCase
         $this->assertNull($this->path);
     }
 
-    public function testInvalidOrDeletedConsentGoesHome(): void
+    public function testInvalidOrDeletedConsentSaysTheLinkIsNoLongerValid(): void
     {
-        $this->assertInstanceOf(Redirect::class, $this->controller(null)->execute());
-        $this->assertSame('', $this->path);
-        $this->assertSame([], $this->page);
+        // e.g. signed with an encryption key that was rotated since, or a consent already cleaned up
+        foreach (['GET', 'POST'] as $method) {
+            $this->page = [];
+            $this->assertInstanceOf(Page::class, $this->controller(null, $method)->execute());
+            $this->assertSame(['title' => 'Link expired', 'robots' => 'NOINDEX,NOFOLLOW'], $this->page);
+            $this->assertNull($this->path);
+        }
     }
 
     /** @dataProvider otherBrowsers */
@@ -133,9 +138,10 @@ class OptoutTest extends TestCase
     #[\PHPUnit\Framework\Attributes\DataProvider('malformedLinks')]
     public function testMalformedLinkDoesNotReachWithdrawal(mixed $id, mixed $token): void
     {
-        $this->controller(null, 'GET', $id, $token)->execute();
-        $this->assertSame('', $this->path);
-        $this->assertSame([], $this->page);
+        // a link damaged by a mail client: no withdrawal, but the shopper learns it did not work
+        $this->assertInstanceOf(Page::class, $this->controller(null, 'GET', $id, $token)->execute());
+        $this->assertSame('Link expired', $this->page['title']);
+        $this->assertNull($this->path);
     }
 
     public static function malformedLinks(): array

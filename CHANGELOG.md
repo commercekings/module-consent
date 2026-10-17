@@ -3,6 +3,9 @@
 ## Unreleased
 
 - Requires Magento 2.4.4 or later (`magento/framework ^103.0.4`): Magento 2.4.0–2.4.3 do not run on PHP 8.1.
+- Purpose labels and source names are translated (`__()`); `i18n/en_US.csv` lists every phrase for translators.
+- An email withdrawal link that no longer verifies (rotated encryption key, removed consent, damaged URL) shows
+  "Link expired": nothing is changed, and it points to "Cookie settings" - instead of a silent redirect home.
 - A purpose belongs to one banner category (the first in display order); the server no longer grants it through a
   second category the banner does not watch.
 - The email withdrawal link confirms the result in every browser (generic text outside the browser that consented);

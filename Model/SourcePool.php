@@ -27,7 +27,7 @@ class SourcePool
     /** code => label */
     public function getLabels(): array
     {
-        return array_map(fn (array $source) => (string)$source['label'], $this->sources);
+        return array_map(fn (array $source) => (string)__((string)$source['label']), $this->sources);
     }
 
     /** The source with this code, null for an unknown code (no consent - fail closed). */

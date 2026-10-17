@@ -188,4 +188,11 @@ class WithdrawalTest extends TestCase
         $this->withdrawnAt = null;
         $this->assertTrue($this->viewModel()->canConfirm(), 'not withdrawn yet: any browser with the link may confirm');
     }
+
+    public function testALinkThatNoLongerVerifiesIsReportedAsInvalid(): void
+    {
+        $this->assertTrue($this->viewModel()->isValidLink());
+        $this->valid = false;
+        $this->assertFalse($this->viewModel()->isValidLink(), 'e.g. signed with a rotated encryption key');
+    }
 }

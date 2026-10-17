@@ -61,7 +61,8 @@ class PurposePool implements PurposeRegistryInterface
 
     public function getLabel(string $purpose): string
     {
-        return (string)($this->purposes[$purpose]['label'] ?? $purpose);
+        // declared in di.xml in English; shown to shoppers in the store's language
+        return (string)__((string)($this->purposes[$purpose]['label'] ?? $purpose));
     }
 
     public function getCookiePatterns(string $purpose): array
