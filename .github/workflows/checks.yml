@@ -93,16 +93,21 @@ jobs:
           composer config --no-plugins allow-plugins true
           self=$(jq -r .name "../packages/${{ github.event.repository.name }}/composer.json")
           extra=()
+          manifest="../packages/${{ github.event.repository.name }}/composer.json"
           # a feature that needs a consent banner gets the CommerceKings banner
-          if jq -e '.require["commercekings/consent-source"]' "../packages/${{ github.event.repository.name }}/composer.json" >/dev/null; then
+          if jq -e '.require["commercekings/consent-source"]' "$manifest" >/dev/null; then
             extra+=("commercekings/module-consent-vanilla:@dev")
           fi
+          # CommerceKings packages the tests need (require-dev is not installed for a dependency)
+          while read -r dev; do
+            extra+=("$dev:@dev")
+          done < <(jq -r '(.["require-dev"] // {}) | keys[] | select(startswith("commercekings/"))' "$manifest")
           composer require --no-update --no-interaction "$self:@dev" "${extra[@]}"
           composer install --no-interaction --no-progress
           echo "PACKAGE=$self" >> "$GITHUB_ENV"
       - name: Unit tests
         working-directory: magento
-        run: vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist --no-extensions --colors=never "vendor/$PACKAGE/Test/Unit"
+        run: vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist --no-extensions --fail-on-skipped --colors=never "vendor/$PACKAGE/Test/Unit"
       - name: JavaScript tests
         if: hashFiles(format('packages/{0}/Test/JavaScript/*.test.cjs', github.event.repository.name)) != ''
         working-directory: magento
