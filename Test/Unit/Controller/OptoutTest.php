@@ -19,6 +19,8 @@ use PHPUnit\Framework\TestCase;
 
 class OptoutTest extends TestCase
 {
+    private array $pathParams = [];
+    private array $messages = [];
     private array $page = [];
     private ?string $path = null;
     private ?int $status = null;
@@ -33,7 +35,8 @@ class OptoutTest extends TestCase
         mixed $key = 'valid',
         bool $keyValid = true,
         ?array $oneClickBody = null,
-        string $contentType = 'application/x-www-form-urlencoded'
+        string $contentType = 'application/x-www-form-urlencoded',
+        bool $busy = false
     ): Index {
         $request = $this->createStub(Http::class);
         $request->method('getMethod')->willReturn($method);
@@ -50,7 +53,9 @@ class OptoutTest extends TestCase
         $allowed = !$machine && in_array($method, ['GET', 'POST'], true) && $id === null && $token === null
             && ($method !== 'POST' || (is_string($key) && $keyValid));
         $links->expects(($allowed && $method === 'POST') || $validMachine ? $this->once() : $this->never())->method('withdraw')
-            ->with($id ?? str_repeat('a', 32), $token ?? str_repeat('b', 64))->willReturn($record);
+            ->with($id ?? str_repeat('a', 32), $token ?? str_repeat('b', 64))
+            ->willReturnCallback(fn () => $busy
+                ? throw new \CommerceKings\Consent\Exception\WithdrawalBusyException('busy') : $record);
         $links->expects($allowed && $method === 'GET' ? $this->once() : $this->never())->method('getConsent')
             ->with(str_repeat('a', 32), str_repeat('b', 64))->willReturn($record);
         $raw = $this->createStub(\Magento\Framework\Controller\Result\Raw::class);
@@ -62,8 +67,9 @@ class OptoutTest extends TestCase
         $validator = $this->createStub(Validator::class);
         $validator->method('validate')->willReturn($keyValid);
         $redirect = $this->createStub(Redirect::class);
-        $redirect->method('setPath')->willReturnCallback(function ($path) use ($redirect) {
+        $redirect->method('setPath')->willReturnCallback(function ($path, $params = []) use ($redirect) {
             $this->path = $path;
+            $this->pathParams = $params;
             return $redirect;
         });
         $redirectFactory = $this->createStub(RedirectFactory::class);
@@ -77,10 +83,17 @@ class OptoutTest extends TestCase
         $page->method('getConfig')->willReturn($config);
         $pageFactory = $this->createMock(PageFactory::class);
         // every browser sees a page - the result, or that the link is no longer valid; never HEAD or a bad form key
-        $showsPage = !$machine && in_array($method, ['GET', 'POST'], true)
+        $showsPage = !$machine && !$busy && in_array($method, ['GET', 'POST'], true)
             && ($method !== 'POST' || (is_string($key) && $keyValid));
         $pageFactory->expects($showsPage ? $this->once() : $this->never())->method('create')->willReturn($page);
-        return new Index($this->createStub(Context::class), $request, $links, $pageFactory, $redirectFactory, $validator, $rawFactory);
+        $messages = $this->createStub(\Magento\Framework\Message\ManagerInterface::class);
+        $messages->method('addErrorMessage')->willReturnCallback(function ($text) use ($messages) {
+            $this->messages[] = (string)$text;
+            return $messages;
+        });
+        $context = $this->createStub(Context::class);
+        $context->method('getMessageManager')->willReturn($messages);
+        return new Index($context, $request, $links, $pageFactory, $redirectFactory, $validator, $rawFactory);
     }
 
     public function testSignedGetShowsConfirmationWithoutWithdrawing(): void
@@ -212,4 +225,19 @@ class OptoutTest extends TestCase
         return ['missing' => [null, true], 'array' => [['key'], true], 'invalid' => ['bad', false]];
     }
 
+    public function testADoubleClickWhileTheFirstConfirmationIsWrittenReturnsToTheConfirmation(): void
+    {
+        $record = new Consent('cid', 'feature', 1, 'source', 'choice', '2020-01-01 00:00:00',
+            '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00');
+        $this->assertInstanceOf(Redirect::class, $this->controller($record, 'POST', busy: true)->execute());
+        $this->assertSame('ckconsent/optout', $this->path, 'not an error page; nothing changed, confirm again');
+        $this->assertSame(['_query' => ['c' => str_repeat('a', 32), 't' => str_repeat('b', 64)]], $this->pathParams);
+        $this->assertSame(['We could not save this right now. Please try again.'], $this->messages);
+    }
+
+    public function testABusyOneClickUnsubscribeAsksTheMailProviderToRetry(): void
+    {
+        $this->controller(null, 'POST', oneClickBody: ['List-Unsubscribe' => 'One-Click'], busy: true)->execute();
+        $this->assertSame(503, $this->status);
+    }
 }

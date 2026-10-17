@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CommerceKings\Consent\Model;
 
+use CommerceKings\Consent\Exception\WithdrawalBusyException;
 use CommerceKings\Consent\Api\BrowserIdentityInterface;
 use CommerceKings\Consent\Api\ConsentGuardInterface;
 use CommerceKings\Consent\Api\ConsentInterface;
@@ -220,7 +221,7 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         // Serialize the whole browser/purpose/website scope, including different signed links for it.
         $lock = 'ck_consent_withdraw_' . hash('sha256', $purpose . '|' . $browserHash . '|' . $websiteId);
         if (!$this->locks->lock($lock, 5)) {
-            throw new \RuntimeException('Consent withdrawal is busy; retry the request.');
+            throw new WithdrawalBusyException('Consent withdrawal is busy; retry the request.');
         }
         $ids = [];
         $tasks = [];

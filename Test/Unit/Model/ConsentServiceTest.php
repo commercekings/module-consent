@@ -122,7 +122,7 @@ class ConsentServiceTest extends TestCase
         try {
             $this->service($locks, $tasks)->withdraw($id, 'email');
             $this->fail('A busy withdrawal must not acknowledge success.');
-        } catch (\RuntimeException $error) {
+        } catch (\CommerceKings\Consent\Exception\WithdrawalBusyException $error) {
             $this->assertSame('Consent withdrawal is busy; retry the request.', $error->getMessage());
         }
         $this->assertSame($before, $this->store->rows);

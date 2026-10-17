@@ -30,4 +30,24 @@ class WithdrawTest extends TestCase
         (new Index($this->createStub(Context::class), $request, $factory, $service, $validator))->execute();
         $this->assertSame(['withdrawn' => 2], $data);
     }
+
+    public function testABusyWithdrawalAnswers503SoTheBrowserRetries(): void
+    {
+        $request = $this->createStub(RequestInterface::class);
+        $request->method('getParam')->willReturnCallback(fn ($key) => $key === 'purpose' ? 'cart_reminder' : 'valid-key');
+        $validator = $this->createStub(Validator::class);
+        $validator->method('validate')->willReturn(true);
+        $status = $data = null;
+        $json = $this->createStub(Json::class);
+        $json->method('setData')->willReturnCallback(function ($d) use ($json, &$data) { $data = $d; return $json; });
+        $json->method('setHttpResponseCode')->willReturnCallback(function ($c) use ($json, &$status) { $status = $c; return $json; });
+        $factory = $this->createStub(JsonFactory::class);
+        $factory->method('create')->willReturn($json);
+        $service = $this->createStub(ConsentInterface::class);
+        $service->method('withdrawCurrent')->willThrowException(
+            new \CommerceKings\Consent\Exception\WithdrawalBusyException('busy'));
+        (new Index($this->createStub(Context::class), $request, $factory, $service, $validator))->execute();
+        $this->assertSame(503, $status, 'not a 500 page');
+        $this->assertSame(['withdrawn' => 0], $data);
+    }
 }

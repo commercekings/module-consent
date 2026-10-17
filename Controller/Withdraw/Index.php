@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CommerceKings\Consent\Controller\Withdraw;
 
+use CommerceKings\Consent\Exception\WithdrawalBusyException;
 use CommerceKings\Consent\Api\ConsentInterface;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
@@ -45,7 +46,12 @@ class Index extends Action implements HttpPostActionInterface, CsrfAwareActionIn
         if (!is_string($purpose) || $purpose === '' || strlen($purpose) > 64) {
             return $this->jsonFactory->create()->setHttpResponseCode(400)->setData(['withdrawn' => 0]);
         }
-        $ids = $this->consents->withdrawCurrent($purpose, 'banner');
+        try {
+            $ids = $this->consents->withdrawCurrent($purpose, 'banner');
+        } catch (WithdrawalBusyException) {
+            // a second click while the first one is written: the browser keeps its hint and retries
+            return $this->jsonFactory->create()->setHttpResponseCode(503)->setData(['withdrawn' => 0]);
+        }
         return $this->jsonFactory->create()->setData(['withdrawn' => count($ids)]);
     }
 }

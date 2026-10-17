@@ -3,6 +3,9 @@
 ## Unreleased
 
 - Requires Magento 2.4.4 or later (`magento/framework ^103.0.4`): Magento 2.4.0–2.4.3 do not run on PHP 8.1.
+- A withdrawal that finds another one for the same browser still running (a double click) answers 503 on the
+  banner endpoint and for one-click POSTs (both retry), and returns the email confirmation page with "Please try
+  again" - instead of Magento's error page.
 - Withdrawal writes its marks first, then reads the active consents with a locking read: a "yes" recorded at the
   same moment as a "no" is withdrawn too, instead of staying active.
 - Purpose labels and source names are translated (`__()`); `i18n/en_US.csv` lists every phrase for translators.

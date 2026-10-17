@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace CommerceKings\Consent\Controller\Optout;
 
+use CommerceKings\Consent\Exception\WithdrawalBusyException;
 use CommerceKings\Consent\Model\WithdrawalLink;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
@@ -50,7 +51,14 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
                 && $this->request->getPostValue() === ['List-Unsubscribe' => 'One-Click']
                 && is_string($id) && preg_match('/^[a-f0-9]{32}$/D', $id)
                 && is_string($token);
-            $consent = $valid ? $this->links->withdraw($id, $token) : null;
+            try {
+                $consent = $valid ? $this->links->withdraw($id, $token) : null;
+            } catch (WithdrawalBusyException) {
+                return $this->rawFactory->create()->setHttpResponseCode(503)
+                    ->setHeader('Content-Type', 'text/plain; charset=UTF-8', true)
+                    ->setHeader('Retry-After', '5', true)
+                    ->setContents('Busy, please retry.');
+            }
             return $this->rawFactory->create()->setHttpResponseCode($consent ? 200 : 400)
                 ->setHeader('Content-Type', 'text/plain; charset=UTF-8', true)
                 ->setHeader('Cache-Control', 'no-store', true)
@@ -69,7 +77,14 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
         }
         $wellFormed = is_string($id) && is_string($token)
             && preg_match('/^[a-f0-9]{32}$/D', $id) && preg_match('/^[a-f0-9]{64}$/D', $token);
-        $consent = !$wellFormed ? null : ($post ? $this->links->withdraw($id, $token) : $this->links->getConsent($id, $token));
+        try {
+            $consent = !$wellFormed ? null
+                : ($post ? $this->links->withdraw($id, $token) : $this->links->getConsent($id, $token));
+        } catch (WithdrawalBusyException) {
+            // a double click while the first confirmation is written: back to the confirmation, nothing changed
+            $this->messageManager->addErrorMessage(__('We could not save this right now. Please try again.'));
+            return $this->redirectFactory->create()->setPath('ckconsent/optout', ['_query' => ['c' => $id, 't' => $token]]);
+        }
         // Any browser with the signed link sees the result; only the original browser sees the purpose and has its
         // banner synced (Withdrawal view model). A link that no longer verifies (an old encryption key, a consent
         // already cleaned up, a damaged URL) changes nothing and says so, with where to change preferences.
