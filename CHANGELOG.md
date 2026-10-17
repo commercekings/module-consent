@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Requires Magento 2.4.4 or later (`magento/framework ^103.0.4`): Magento 2.4.0–2.4.3 do not run on PHP 8.1.
 - **Hyvä:** the purpose API without RequireJS (`js/consent/hyva.js`, loaded only under Hyvä's `hyva_default`
   handle). Sources register their adapter in `window.CommerceKingsConsent.adapters`; features use the
   `ck-consent:ready` event or `window.CommerceKingsConsent.provider`. The provider logic is shared with the AMD module
