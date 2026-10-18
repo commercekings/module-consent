@@ -116,6 +116,4 @@ their own. You are responsible for your store's privacy: what you collect, the w
 and whether your setup meets the laws that apply to you (e.g. GDPR, ePrivacy, email marketing rules). Get legal advice
 if you are unsure.
 
-## Need help installing or setting it up?
-
-**[Get a quote →](https://commercekings.net)**
+**Need help installing or setting it up?** **[Get a quote →](https://commercekings.net)**
