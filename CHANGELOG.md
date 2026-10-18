@@ -15,7 +15,8 @@
   same moment as a "no" is withdrawn too, instead of staying active.
 - Purpose labels and source names are translated (`__()`); `i18n/en_US.csv` lists every phrase for translators.
 - Email withdrawal links signed with an older key still listed in `env.php` keep working after `encryption:key:change`
-  (new links use the newest key), so recipients can still unsubscribe from emails already sent.
+  (new links use the newest key), so recipients can still unsubscribe from emails already sent. Removing the old key
+  from `env.php` ends them ("Link expired"); after a leaked key, remove it once nothing else needs it.
 - An email withdrawal link that no longer verifies (a key removed from `env.php`, removed consent, damaged URL) shows
   "Link expired": nothing is changed, and it points to "Cookie settings" – instead of a silent redirect home.
 - A purpose belongs to one banner category (the first in display order); the server no longer grants it through a

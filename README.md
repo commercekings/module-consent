@@ -97,7 +97,10 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 - An email already handed to the mail server cannot be recalled by a withdrawal.
 - It does not block third-party scripts by itself; each feature checks its purpose.
 - Email withdrawal links are signed with Magento's encryption key. After `encryption:key:change` links already sent
-  keep working while the old key stays in `env.php` (Magento keeps it); removing it from there ends them.
+  keep working while the old key stays in `env.php` (Magento keeps it); removing it from there ends them – they then
+  show "Link expired". If you changed the key because it leaked, remove the old key once nothing else needs it:
+  until then it can sign withdrawal links too (they can only withdraw a consent, never grant one, and need the
+  consent's random ID).
 
 ## More
 
