@@ -57,7 +57,7 @@ Without a selected source nothing has consent: the module fails closed.
 | Consent cookie name | `cc_cookie` – changing it asks everyone again |
 | Consent lifetime (days) | 182 |
 | Record consent for | required purposes always; optional ones (e.g. analytics) only if ticked |
-| Record retention (days) | 183 after expiry or withdrawal |
+| Record retention (days, global) | 183 after expiry or withdrawal |
 | Privacy policy page | empty – every banner links it |
 
 Categories and purposes are defined in code and shown read-only. Flush the full page cache after a change.
@@ -74,6 +74,12 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 `Api\ConsentInterface` – ask for and record consent
 
 `Api\ConsentGuardInterface` – SQL guard against a withdrawal at the same moment
+
+`Api\WithdrawalLinkInterface` – a signed withdrawal link for your emails
+
+`Api\PurposeRegistryInterface` – the declared purposes and their categories
+
+`Api\BannerSettingsInterface` – settings every banner shares (privacy policy page)
 
 `Api\WithdrawalHandlerInterface` – your cleanup when consent is withdrawn
 

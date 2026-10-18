@@ -7,10 +7,10 @@ This package provides permission records and integrations, not a declaration tha
 - Source adapter resolution waits for HTML parsing. Banner modules depend on the provider, so its listeners are registered before the banner renders.
 - Purpose requests serialize, including the initial grants for multiple purposes, so they share the server-issued browser identity.
 - Only an acknowledged grant for the current saved state notifies features. Withdrawal notifies OFF immediately, remains queued behind any active request, and retains its browser hint until an acknowledged response. Network reconnection / subsequent page loads retry hints; page navigation sends a beacon. A browser that never contacts the server again cannot deliver an outstanding withdrawal.
-- Browser identity is HttpOnly, SameSite=Lax and Secure on HTTPS. Identity and retry-hint lifetimes use the configured source-cookie lifetime.
+- Browser identity is HttpOnly, SameSite=Lax and Secure on HTTPS. Identity and retry-hint lifetimes use the configured consent lifetime.
 - Server checks and the SQL guard cap permission at the configured lifetime from the saved choice time; reducing the lifetime also invalidates older permissions. A source may expire consent sooner. This prevents old choices outliving the withdrawal-mark retention safety minimum.
 - Always-on categories cannot grant feature purposes. The default reminder switch describes use of the checkout email explicitly and remains independent of analytics.
-- Withdrawal marks cannot be removed before the longest configured website source-cookie lifetime plus one day. Consent evidence retention remains the configured period after expiry or withdrawal.
+- Withdrawal marks cannot be removed before the longest configured website consent lifetime plus one day. Consent evidence retention remains the configured period after expiry or withdrawal.
 - Withdrawal and pending module cleanup commit together. Handlers run afterward; failed cleanup never restores permission. Unfinished `ck_consent_cleanup` tasks retain pseudonymous scope independently of evidence until their registered handler succeeds. Monitor pending tasks and restore disabled handlers; successful tasks are deleted. Module cleanup must preserve later grants and native Magento data outside its ownership.
 - `consent:config:export` captures store wording, mappings, revisions, banner configuration and an optional supplied copy of the published policy. Preserve exports with the release, policy and visual evidence.
 
