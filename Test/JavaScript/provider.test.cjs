@@ -105,6 +105,20 @@ test('a refused or failed grant does not notify features and seen lifetime follo
     assert.match(f.b.writes.at(-1), /max-age=2592000; Secure$/);
 });
 
+test('a grant refused on one page is not trusted on the next, which asks the server again', () => {
+    const first = fixture();
+    first.adapter.change('analytics', true);
+    first.requests[0].complete({granted: false});
+    const next = fixture(first.b, {analytics: true});        // reload: the banner cookie still says yes
+    assert.equal(next.consent.hasConsent('analytics'), false, 'the refused yes stays off after a reload');
+    assert.equal(next.requests.length, 1, 'the page asks again');
+    next.requests[0].complete({granted: true});
+    assert.equal(next.consent.hasConsent('analytics'), true, 'acknowledged now');
+    const later = fixture(next.b, {analytics: true});
+    assert.equal(later.consent.hasConsent('analytics'), true, 'an acknowledged yes is trusted on later pages');
+    assert.equal(later.requests.length, 0, 'and not asked again');
+});
+
 test('rapid changes discard obsolete queued grants and keep the newest explicit choice', () => {
     const f = fixture();
     f.adapter.change('analytics', true);

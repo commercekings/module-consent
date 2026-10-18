@@ -69,6 +69,19 @@ class WithdrawalCleanupTest extends TestCase
         (new WithdrawalCleanup($store, new WithdrawalPool(), $this->locks(), new NullLogger()))->run([1]);
     }
 
+    /** A module removed for good: its task stops retrying after about three days, with an error in the log. */
+    public function testATaskIsGivenUpAfterTheLastAttempt(): void
+    {
+        $store = $this->createMock(WithdrawalCleanupStore::class);
+        $store->method('loadDue')->willReturn(['attempts' => WithdrawalCleanup::MAX_ATTEMPTS - 1] + $this->task());
+        $store->expects($this->once())->method('complete')->with(1);
+        $store->expects($this->never())->method('retry');
+        $logger = $this->createMock(\Psr\Log\LoggerInterface::class);
+        $logger->expects($this->once())->method('error')->with('Consent cleanup given up after repeated failures.',
+            $this->callback(fn ($context) => $context['handler'] === 'feature' && !isset($context['message'])));
+        (new WithdrawalCleanup($store, new WithdrawalPool(), $this->locks(), $logger))->run([1]);
+    }
+
     public function testConcurrentWorkerDoesNotRunLockedTask(): void
     {
         $store = $this->createMock(WithdrawalCleanupStore::class);

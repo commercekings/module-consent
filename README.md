@@ -96,6 +96,8 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 - A consent works only in the browser it was given in; it is not tied to an email address.
 - An email already handed to the mail server cannot be recalled by a withdrawal.
 - It does not block third-party scripts by itself; each feature checks its purpose.
+- Each new banner choice adds a record, and the grant endpoint is anonymous: a script can add rows until they expire.
+  Rate-limit `/ckconsent/grant` (commercekings/module-rate-limit suggests 30 a minute per IP) or in your web server.
 - Email withdrawal links are signed with Magento's encryption key. After `encryption:key:change` links already sent
   keep working while the old key stays in `env.php` (Magento keeps it); removing it from there ends them – they then
   show "Link expired". If you changed the key because it leaked, remove the old key once nothing else needs it:

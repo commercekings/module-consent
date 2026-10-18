@@ -7,9 +7,15 @@ use CommerceKings\Consent\Api\Data\WithdrawalContext;
 use Magento\Framework\Lock\LockManagerInterface;
 use Psr\Log\LoggerInterface;
 
-/** Runs committed cleanup tasks synchronously or from cron, independently of the visitor's session. */
+/**
+ * Runs committed cleanup tasks synchronously or from cron, independently of the visitor's session. A task that keeps
+ * failing – e.g. its module was removed – is retried with growing delays (at most hourly) and given up after
+ * MAX_ATTEMPTS, about three days: the withdrawal itself is already in force; only the module's cleanup is left.
+ */
 class WithdrawalCleanup
 {
+    public const MAX_ATTEMPTS = 72;
+
     public function __construct(
         private readonly WithdrawalCleanupStore $store,
         private readonly WithdrawalPool $pool,
@@ -55,6 +61,13 @@ class WithdrawalCleanup
                 ));
                 $this->store->complete($id);
             } catch (\Throwable $error) {
+                if ((int)$task['attempts'] + 1 >= self::MAX_ATTEMPTS) {
+                    $this->store->complete($id);
+                    $this->logger->error('Consent cleanup given up after repeated failures.', [
+                        'task_id' => $id, 'handler' => $task['handler'], 'exception_class' => get_class($error),
+                    ]);
+                    return;
+                }
                 $this->store->retry($id, (int)$task['attempts']);
                 // Exception messages may contain module-owned PII; log only the class and task metadata.
                 $this->logger->warning('Consent cleanup remains pending for retry.', [

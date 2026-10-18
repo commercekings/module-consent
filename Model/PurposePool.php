@@ -36,23 +36,25 @@ class PurposePool implements PurposeRegistryInterface
         return array_map('strval', array_keys($this->purposes));
     }
 
-    public function isDeclared(string $purpose): bool
+    public function isDeclared(string $purpose, ?int $websiteId = null): bool
     {
-        return isset($this->purposes[$purpose]) && $this->isActive($purpose);
+        return isset($this->purposes[$purpose]) && $this->isActive($purpose, $websiteId);
     }
 
     /**
      * No "active_if" -> always active. Otherwise active while at least one of the listed settings
      * (config flags, store view scope) is on - e.g. analytics while Magento's GA or Consent Mode is.
      */
-    public function isActive(string $purpose): bool
+    public function isActive(string $purpose, ?int $websiteId = null): bool
     {
         $flags = array_filter(array_map('strval', (array)($this->purposes[$purpose]['active_if'] ?? [])));
         if (!$flags || $this->scopeConfig === null) {
             return true;
         }
         foreach ($flags as $path) {
-            if ($this->scopeConfig->isSetFlag($path, ScopeInterface::SCOPE_STORE)) {
+            $on = $websiteId === null ? $this->scopeConfig->isSetFlag($path, ScopeInterface::SCOPE_STORE)
+                : $this->scopeConfig->isSetFlag($path, ScopeInterface::SCOPE_WEBSITE, $websiteId);
+            if ($on) {
                 return true;
             }
         }

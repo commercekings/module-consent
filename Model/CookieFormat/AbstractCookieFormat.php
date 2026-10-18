@@ -59,7 +59,8 @@ abstract class AbstractCookieFormat implements CookieFormatInterface
             }
             $time = strtotime($value);
             if ($time) {
-                return gmdate('Y-m-d H:i:s', $time);
+                // outside MySQL's TIMESTAMP range the row would store 0000-00-00: no usable time
+                return self::storable($time) ? gmdate('Y-m-d H:i:s', $time) : '';
             }
         }
         return '';
@@ -81,7 +82,14 @@ abstract class AbstractCookieFormat implements CookieFormatInterface
     public function expiresAt(array $cookie): string
     {
         $ms = $this->value($cookie, static::EXPIRES);
-        return is_numeric($ms) && $ms > 0 ? gmdate('Y-m-d H:i:s', (int)($ms / 1000)) : '';
+        // a time MySQL cannot store counts as none: the server's own maximum lifetime applies
+        return is_numeric($ms) && $ms > 0 && self::storable((int)($ms / 1000)) ? gmdate('Y-m-d H:i:s', (int)($ms / 1000)) : '';
+    }
+
+    /** Within MySQL's TIMESTAMP range: 1970-01-01 00:00:01 to 2038-01-19 03:14:07 UTC. */
+    private static function storable(int $time): bool
+    {
+        return $time >= 1 && $time <= 2147483647;
     }
 
     /** The value at a dotted path, null when missing. */

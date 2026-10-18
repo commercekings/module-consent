@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- A purpose's `active_if` settings are read for each consent's own website (cron and queue consumers check every
+  website from one store).
+- Browser times MySQL cannot store (before 1970, after 2038) count as none instead of becoming 0000-00-00 rows.
+- A yes the server has not acknowledged (refused or lost) stays off on later pages, which ask again.
+- A cleanup task that keeps failing is given up after 72 attempts (about three days), with an error in the log.
 - A consent withdrawn with the email link on another device also switches the banner off in the browser that gave
   it: opening Cookie settings asks `GET /ckconsent/status` (one small request per opening, nothing on page loads).
   Sources announce the opening with the window event `ck-consent:preferences`.

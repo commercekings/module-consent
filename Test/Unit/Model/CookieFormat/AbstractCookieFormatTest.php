@@ -35,6 +35,17 @@ class AbstractCookieFormatTest extends TestCase
         $this->assertSame('2027-04-13 15:51:49', $format->expiresAt($cookie));
     }
 
+    /** Times MySQL cannot store would become 0000-00-00 rows: a bad time is no time. */
+    public function testTimesOutsideTheStorableRangeAreIgnored(): void
+    {
+        $format = $this->format();
+        $this->assertSame('', $format->consentTime(['meta' => ['saved' => '1969-12-31T23:59:59Z']]), 'before 1970');
+        $this->assertSame('', $format->consentTime(['meta' => ['saved' => '2040-01-01T00:00:00Z']]), 'after 2038');
+        $this->assertSame('', $format->expiresAt(['meta' => ['until' => 100000000000000]]), 'a five-digit year');
+        $this->assertSame('2038-01-19 03:14:07', $format->expiresAt(['meta' => ['until' => 2147483647000]]), 'the last second');
+        $this->assertSame('2026-10-11 10:00:00', $format->consentTime(['meta' => ['saved' => '2026-10-11T10:00:00Z']]));
+    }
+
     public function testListOfCategoriesAndMissingValues(): void
     {
         $format = $this->format();

@@ -37,7 +37,11 @@ interface PurposeRegistryInterface
     /** @return string[] the active purposes */
     public function getCodes(): array;
 
-    public function isDeclared(string $purpose): bool;
+    /**
+     * @param int|null $websiteId whose settings decide "active_if" (null: the current store) – cron and queue
+     *     consumers check consents of every website from one store
+     */
+    public function isDeclared(string $purpose, ?int $websiteId = null): bool;
 
     public function getLabel(string $purpose): string;
 

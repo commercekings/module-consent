@@ -69,7 +69,7 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         }
         $websiteId = $this->websiteId();
         $source = $this->source->get($websiteId);
-        if (!$source || !in_array($purpose, $this->mappedPurposes($source), true)
+        if (!$source || !in_array($purpose, $this->mappedPurposes($source, $websiteId), true)
             // an optional purpose the shop does not record: the source's cookie alone decides, nothing is stored
             || !$this->config->isRecorded($purpose, $websiteId)
         ) {
@@ -171,7 +171,7 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
             $source = $this->source->get($websiteId);
             if ($source) {
                 $terms = [];
-                foreach ($this->mappedPurposes($source) as $purpose) {
+                foreach ($this->mappedPurposes($source, $websiteId) as $purpose) {
                     if (!$this->config->isRecorded($purpose, $websiteId)) {
                         continue;
                     }
@@ -289,23 +289,23 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         return $row['withdrawn_at'] === null
             && (string)$row['expires_at'] > gmdate('Y-m-d H:i:s')
             && $this->maximumExpiry(min((string)$row['source_time'], (string)$row['granted_at']), $websiteId) > gmdate('Y-m-d H:i:s')
-            && $this->purposes->isDeclared($purpose)
+            && $this->purposes->isDeclared($purpose, $websiteId)
             // an optional purpose the shop stopped recording: its old records no longer count either
             && $this->config->isRecorded($purpose, $websiteId)
             && (string)$row['terms_revision'] === $this->purposes->getTermsRevision($purpose)
             && $source !== null
             && (string)$row['source'] === $source->getCode()
             && (string)$row['banner_revision'] === $this->config->getRevision($websiteId)
-            && in_array($purpose, $this->mappedPurposes($source), true);
+            && in_array($purpose, $this->mappedPurposes($source, $websiteId), true);
     }
 
     /** @return string[] Declared purposes granted by at least one current source category. */
-    private function mappedPurposes(SourceInterface $source): array
+    private function mappedPurposes(SourceInterface $source, int $websiteId): array
     {
         $mapped = [];
         foreach ($source->getCategories() as $category) {
             foreach ($category['purposes'] as $purpose) {
-                if ($this->purposes->isDeclared($purpose)) {
+                if ($this->purposes->isDeclared($purpose, $websiteId)) {
                     $mapped[$purpose] = $purpose;
                 }
             }

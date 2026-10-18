@@ -16,7 +16,10 @@
     'use strict';
 
     return function (adapter, transport) {
+        // ck_consent_seen per purpose: 1 = a yes seen (or a "no" not yet confirmed), 2 = a yes the server has not
+        // acknowledged yet – a later page keeps it off until it is, so a refused grant is not trusted after reload
         var SEEN = 'ck_consent_seen',
+            UNACKNOWLEDGED = 2,
             listeners = Object.create(null),
             versions = Object.create(null),
             acknowledged = Object.create(null),
@@ -49,6 +52,7 @@
             }
         }
 
+        /** @param {boolean|number} pending false: forget; true: 1; or a marker such as UNACKNOWLEDGED */
         function remember(purpose, pending) {
             var seen = readSeen(),
                 secure = location.protocol === 'https:' ? '; Secure' : '',
@@ -58,7 +62,8 @@
                 days = Number(config().cookieLifetimeDays),
                 lifetime = Number.isFinite(days) && days > 0 ? '; max-age=' + days * 86400 : '';
             if (pending) {
-                Object.defineProperty(seen, purpose, {value: 1, enumerable: true, configurable: true});
+                Object.defineProperty(seen, purpose, {value: pending === true ? 1 : pending, enumerable: true,
+                    configurable: true});
             } else {
                 delete seen[purpose];
             }
@@ -100,6 +105,7 @@
                     if (action.isOn) {
                         if (response && response.granted === true) {
                             acknowledged[action.purpose] = true;
+                            remember(action.purpose, true);
                             notify(action.purpose, true);
                         }
                     } else if (response && typeof response.withdrawn === 'number') {
@@ -117,8 +123,9 @@
             changes++;
             versions[purpose] = (versions[purpose] || 0) + 1;
             acknowledged[purpose] = false;
-            // Also remember OFF until the server confirms it; a beacon has no acknowledgement.
-            remember(purpose, true);
+            // Also remember OFF until the server confirms it; a beacon has no acknowledgement. A yes stays
+            // unacknowledged until the server records it.
+            remember(purpose, isOn ? UNACKNOWLEDGED : true);
             if (!isOn) {
                 notify(purpose, false);
             }
@@ -144,7 +151,9 @@
             var seen = readSeen();
             (config().purposes || []).forEach(function (purpose) {
                 if (adapter.hasConsent(purpose)) {
-                    if (!seen[purpose] && isRecorded(purpose)) {
+                    if (seen[purpose] === UNACKNOWLEDGED && isRecorded(purpose)) {
+                        sync(purpose, true);   // a grant refused or lost on an earlier page: ask again
+                    } else if (!seen[purpose] && isRecorded(purpose)) {
                         remember(purpose, true);
                     }
                 } else if (seen[purpose] && adapter.hasChoice()) {
@@ -207,7 +216,8 @@
 
         return {
             hasConsent: function (purpose) {
-                return adapter.hasConsent(purpose) && (!isRecorded(purpose) || acknowledged[purpose] !== false);
+                return adapter.hasConsent(purpose) && (!isRecorded(purpose)
+                    || (acknowledged[purpose] !== false && readSeen()[purpose] !== UNACKNOWLEDGED));
             },
             onChange: function (purpose, callback) {
                 watch(purpose);
