@@ -7,7 +7,7 @@ namespace CommerceKings\Consent\Api;
  * For features that must not act on a withdrawn consent, even when the withdrawal happens at the same
  * moment: put this condition into the same UPDATE that stores or uses the consent, e.g.
  *
- *   UPDATE quote SET reminded_at = NOW() WHERE entity_id = 42 AND <validCondition('quote.consent_id')>
+ *   UPDATE my_feature_table SET sent_at = NOW() WHERE id = 42 AND <validCondition('my_feature_table.consent_id')>
  *
  * The database then orders it against a withdrawal: either the update sees the consent withdrawn and
  * changes nothing, or it finishes first and the withdrawal event (fired after the consent is marked)
