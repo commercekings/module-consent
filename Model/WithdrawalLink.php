@@ -98,7 +98,7 @@ class WithdrawalLink implements WithdrawalLinkInterface
     {
         $keys = preg_split('/\s+/', trim((string)$this->deploymentConfig->get('crypt/key'))) ?: [];
         $signatures = array_map(fn (string $key) => hash_hmac('sha256', $payload, $this->decode($key)),
-            array_values(array_filter($keys, 'strlen')));
+            array_values(array_filter($keys, fn (string $key): bool => $key !== '')));
         if (array_pop($signatures) !== $current) {
             return [];
         }
