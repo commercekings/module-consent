@@ -225,6 +225,60 @@ class OptoutTest extends TestCase
         return ['missing' => [null, true], 'array' => [['key'], true], 'invalid' => ['bad', false]];
     }
 
+    /** Gmail's one-click unsubscribe on an email sent before encryption:key:change, with Magento's real encryptor. */
+    public function testOneClickUnsubscribeFromAnEmailSentBeforeAKeyChange(): void
+    {
+        $id = str_repeat('a', 32);
+        $token = hash_hmac('sha256', 'commercekings_consent_withdrawal|1|' . $id, 'key-before-the-change');
+        $this->assertSame(200, $this->oneClickAfterKeyChange("key-before-the-change\nkey-after-the-change", $id, $token, $withdrawn));
+        $this->assertSame([[$id, 'email']], $withdrawn, 'withdrawn, so the subscription is removed');
+        $this->assertSame(400, $this->oneClickAfterKeyChange('key-after-the-change', $id, $token, $withdrawn));
+        $this->assertSame([], $withdrawn, 'with the old key removed from env.php the link is refused');
+    }
+
+    private function oneClickAfterKeyChange(string $keys, string $id, string $token, ?array &$withdrawn): int
+    {
+        $withdrawn = [];
+        $record = new Consent($id, 'cart_reminder', 1, 'vanilla', 'choice', '2020-01-01 00:00:00',
+            '1', '1', '2020-01-01 00:00:00', '2020-02-01 00:00:00');
+        $consents = $this->createStub(\CommerceKings\Consent\Api\ConsentInterface::class);
+        $consents->method('get')->willReturn($record);
+        $consents->method('withdraw')->willReturnCallback(function ($consentId, $via) use (&$withdrawn) {
+            $withdrawn[] = [$consentId, $via];
+            return [$consentId];
+        });
+        $config = $this->createStub(\Magento\Framework\App\DeploymentConfig::class);
+        $config->method('get')->willReturn($keys);
+        $store = $this->createStub(\Magento\Store\Model\Store::class);
+        $store->method('getWebsiteId')->willReturn(1);
+        $stores = $this->createStub(\Magento\Store\Model\StoreManagerInterface::class);
+        $stores->method('getStore')->willReturn($store);
+        $encryptor = new \Magento\Framework\Encryption\Encryptor($this->createStub(\Magento\Framework\Math\Random::class),
+            $config, $this->createStub(\Magento\Framework\Encryption\KeyValidator::class));
+        $link = new WithdrawalLink($consents, $config, $this->createStub(\Magento\Framework\UrlInterface::class), $stores,
+            $encryptor);
+        $request = $this->createStub(Http::class);
+        $request->method('getMethod')->willReturn('POST');
+        $request->method('getParam')->willReturnCallback(fn ($name) => ['c' => $id, 't' => $token][$name] ?? null);
+        $request->method('getQuery')->willReturnCallback(fn ($name) => ['c' => $id, 't' => $token][$name] ?? null);
+        $request->method('getPost')->willReturnCallback(fn ($name) => ['List-Unsubscribe' => 'One-Click'][$name] ?? null);
+        $request->method('getPostValue')->willReturn(['List-Unsubscribe' => 'One-Click']);
+        $request->method('getHeader')->willReturn('application/x-www-form-urlencoded');
+        $status = 0;
+        $raw = $this->createStub(\Magento\Framework\Controller\Result\Raw::class);
+        $raw->method('setHttpResponseCode')->willReturnCallback(function ($code) use ($raw, &$status) {
+            $status = $code;
+            return $raw;
+        });
+        $raw->method('setHeader')->willReturnSelf();
+        $raw->method('setContents')->willReturnSelf();
+        $rawFactory = $this->createStub(\Magento\Framework\Controller\Result\RawFactory::class);
+        $rawFactory->method('create')->willReturn($raw);
+        (new Index($this->createStub(Context::class), $request, $link, $this->createStub(PageFactory::class),
+            $this->createStub(RedirectFactory::class), $this->createStub(Validator::class), $rawFactory))->execute();
+        return $status;
+    }
+
     public function testADoubleClickWhileTheFirstConfirmationIsWrittenReturnsToTheConfirmation(): void
     {
         $record = new Consent('cid', 'feature', 1, 'source', 'choice', '2020-01-01 00:00:00',

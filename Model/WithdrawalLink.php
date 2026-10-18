@@ -12,7 +12,10 @@ use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\StoreManagerInterface;
 
-/** A signed link authorizes withdrawal from any browser, on the recorded consent's website only. */
+/**
+ * A signed link authorizes withdrawal from any browser, on the recorded consent's website only. New links are signed
+ * with the newest key; links signed with an older key still listed in env.php keep working after a key change.
+ */
 class WithdrawalLink implements WithdrawalLinkInterface
 {
     public function __construct(
@@ -68,10 +71,44 @@ class WithdrawalLink implements WithdrawalLinkInterface
         }
         $websiteId = (int)$this->stores->getStore()->getWebsiteId();
         try {
-            return hash_equals($this->sign($consentId, $websiteId), $token);
+            $current = $this->sign($consentId, $websiteId);
         } catch (\LogicException | \RuntimeException) {
             return false;
         }
+        if (hash_equals($current, $token)) {
+            return true;
+        }
+        // Links already in inboxes keep working after encryption:key:change: older keys still listed in env.php
+        // verify them too. A link can only withdraw, so an old key can never turn anything on.
+        foreach ($this->earlierSignatures($this->payload($consentId, $websiteId), $current) as $signature) {
+            if (hash_equals($signature, $token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Signatures under the older keys in crypt/key (newest last), computed like Encryptor::hash(). None when that
+     * computation does not reproduce the encryptor's own signature for the newest key.
+     *
+     * @return string[]
+     */
+    private function earlierSignatures(string $payload, string $current): array
+    {
+        $keys = preg_split('/\s+/', trim((string)$this->deploymentConfig->get('crypt/key'))) ?: [];
+        $signatures = array_map(fn (string $key) => hash_hmac('sha256', $payload, $this->decode($key)),
+            array_values(array_filter($keys, 'strlen')));
+        if (array_pop($signatures) !== $current) {
+            return [];
+        }
+        return array_reverse($signatures);
+    }
+
+    /** Like Encryptor::decodeKey(): keys made by Magento 2.4.7+ are stored as "base64" + the encoded key. */
+    private function decode(string $key): string
+    {
+        return str_starts_with($key, 'base64') ? (string)base64_decode(substr($key, 6)) : $key;
     }
 
     private function sign(string $consentId, int $websiteId): string

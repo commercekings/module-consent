@@ -175,7 +175,7 @@ class WithdrawalLinkTest extends TestCase
         $this->assertSame(str_repeat('b', 64), $this->token($this->service($encryptor)));
     }
 
-    public function testMultipleKeysUseCurrentKeyAndRejectRawDeploymentTokens(): void
+    public function testMultipleKeysSignWithTheCurrentKeyAndRejectRawDeploymentTokens(): void
     {
         $this->key = "old-key\nnew-key";
         $service = $this->service();
@@ -191,10 +191,61 @@ class WithdrawalLinkTest extends TestCase
         $this->website = 2;
         $this->assertNull($service->getConsent($id, $native));
         $this->website = 1;
-        $this->assertNull($service->getConsent($id, hash_hmac('sha256', $payload, 'old-key')));
+        $this->assertNull($service->getConsent(str_repeat('b', 32), hash_hmac('sha256', $payload, 'old-key')),
+            'an old-key signature is still bound to its consent id');
         $this->key = 'different-key';
         $this->assertNull($this->service()->getConsent($id, $native));
         $this->assertSame([], $this->events);
+    }
+
+    public function testLinksSignedWithAnOlderKeyStillListedKeepWorkingAfterAKeyChange(): void
+    {
+        $id = str_repeat('a', 32);
+        $payload = 'commercekings_consent_withdrawal|1|' . $id;
+        $first = hash_hmac('sha256', $payload, 'first-key');
+        $second = hash_hmac('sha256', $payload, base64_decode('c2Vjb25kLWtleQ=='));
+        $this->key = "first-key\nbase64c2Vjb25kLWtleQ==\nthird-key";
+        $service = $this->service();
+        $this->assertSame(hash_hmac('sha256', $payload, 'third-key'), $this->token($service), 'new links: newest key');
+        $this->assertNotNull($service->getConsent($id, $first), 'signed before the first key change');
+        $this->assertNotNull($service->getConsent($id, $second), 'signed before the second change (2.4.7+ key format)');
+        $this->assertNull($service->getConsent($id, hash_hmac('sha256', $payload, 'removed-key')), 'a key no longer listed');
+        $this->website = 2;
+        $this->assertNull($service->getConsent($id, $first), 'still bound to its website');
+        $this->website = 1;
+        $this->key = "second-only\nthird-key";
+        $this->assertNull($this->service()->getConsent($id, $first), 'removing a key from env.php ends its links');
+    }
+
+    /** The use case: an email sent before encryption:key:change, its unsubscribe link clicked after it. */
+    public function testUnsubscribingFromAnEmailSentBeforeAKeyChangeStillWithdraws(): void
+    {
+        $id = str_repeat('a', 32);
+        $this->key = 'key-before-the-change';
+        $sentBefore = $this->token($this->service());                     // the link in the email already sent
+
+        $this->key = "key-before-the-change\nkey-after-the-change";       // what encryption:key:change leaves
+        $afterChange = $this->service();
+        $this->assertNotSame($sentBefore, $this->token($afterChange), 'new emails get links signed with the new key');
+        $this->assertNotNull($afterChange->withdraw($id, $sentBefore), 'the old email\'s link still withdraws');
+        $this->assertSame([[$id, 'email']], $this->withdrawals);
+        $this->assertNotNull($afterChange->withdraw($id, $sentBefore), 'a second click shows the result again');
+        $this->assertSame([[$id, 'email']], $this->withdrawals, '...without withdrawing twice');
+
+        $this->withdrawals = [];
+        $this->key = 'key-after-the-change';                               // the shop removed the old key
+        $this->assertNull($this->service()->withdraw($id, $sentBefore));
+        $this->assertSame([], $this->withdrawals, 'removing the old key from env.php ends its links');
+    }
+
+    public function testOlderKeysAreIgnoredWhenTheEncryptorSignsDifferently(): void
+    {
+        $this->key = "first-key\nnew-key";
+        $encryptor = $this->createStub(EncryptorInterface::class);
+        $encryptor->method('hash')->willReturn(str_repeat('c', 64));    // e.g. a replaced Encryptor
+        $id = str_repeat('a', 32);
+        $old = hash_hmac('sha256', 'commercekings_consent_withdrawal|1|' . $id, 'first-key');
+        $this->assertNull($this->service($encryptor)->getConsent($id, $old), 'unconfirmed: only the newest key counts');
     }
 
     public function testEncodedKeyRejectsRawSignatureAndNativeWithdrawalKeepsReplayProtection(): void

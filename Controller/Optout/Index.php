@@ -86,7 +86,7 @@ class Index extends Action implements HttpGetActionInterface, HttpPostActionInte
             return $this->redirectFactory->create()->setPath('ckconsent/optout', ['_query' => ['c' => $id, 't' => $token]]);
         }
         // Any browser with the signed link sees the result; only the original browser sees the purpose and has its
-        // banner synced (Withdrawal view model). A link that no longer verifies (an old encryption key, a consent
+        // banner synced (Withdrawal view model). A link that no longer verifies (a key removed from env.php, a consent
         // already cleaned up, a damaged URL) changes nothing and says so, with where to change preferences.
         $page = $this->pageFactory->create();
         $page->getConfig()->getTitle()->set((string)match (true) {
