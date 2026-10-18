@@ -24,6 +24,14 @@ If you allow cart reminder emails, we use the email address you provide at check
 
 You can stop future reminders through [VERIFIED COOKIE SETTINGS LOCATION] or the unsubscribe link in a reminder. Withdrawal does not cancel your cart or order. A message already handed to the email delivery service cannot be recalled.
 
+## Cart reminder texts – include only if enabled
+
+If you tick the box next to your mobile number at checkout, we use that number and details of your unfinished cart to send [NUMBER / TIMING] text reminders. We record your consent with the exact wording you saw, the time, and your number and IP address only as keyed hashes. This permission is separate from email and from the cookie settings.
+
+[NAME SMS DELIVERY PROVIDER AND OTHER RECIPIENTS]. Consent records are kept while the consent is active and for [VERIFIED PERIOD, default 5 years] after it is withdrawn.
+
+You can stop future texts by replying STOP (START resumes them) or by unticking the box at checkout. A text already handed to the SMS provider cannot be recalled.
+
 ## Your choices and consent evidence
 
 Optional choices start off. You can accept, reject or choose separately in the consent settings. You can reopen them through [VERIFIED SETTINGS LINK LOCATION] and withdraw permission at any time. Browser settings apply to this browser; [EXPLAIN ANY ACCOUNT-LEVEL OR EMAIL-LEVEL OPT-OUT THE SHOP ACTUALLY PROVIDES].
