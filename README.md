@@ -90,6 +90,7 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
 - A consent works only in the browser it was given in; it is not tied to an email address.
 - An email already handed to the mail server cannot be recalled by a withdrawal.
 - It does not block third-party scripts by itself; each feature checks its purpose.
+- Email withdrawal links are signed with Magento's encryption key: changing the key invalidates links already sent.
 
 ## More
 
