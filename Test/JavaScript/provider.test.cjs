@@ -4,19 +4,25 @@ const {browser, load, pendingRequest} = require('./harness.cjs');
 
 function fixture(b = browser({'commercekings-consent-config': {
     purposes: ['analytics', 'cart_reminder'], cookieLifetimeDays: 30
-}})) {
-    const requests = [], beacons = [], callbacks = [];
-    const states = {analytics: false, cart_reminder: false}, listeners = {};
-    let choice = false;
+}}), initial = {}) {
+    const requests = [], beacons = [], callbacks = [], checks = [];
+    const states = {analytics: false, cart_reminder: false, ...initial}, listeners = {};
+    let choice = Object.keys(initial).length > 0;
     const adapter = {
         hasChoice: () => choice,
         hasConsent: purpose => states[purpose] === true,
         onChange: (purpose, fn) => { listeners[purpose] = fn; },
+        revoke(purpose) { this.change(purpose, false); },
         change(purpose, value) { choice = true; states[purpose] = value; listeners[purpose](value); }
     };
     const jquery = arg => { if (typeof arg === 'function') arg(); };
     jquery.mage = {cookies: {get: () => 'form-key', defaults: {path: '/default-shop/', domain: '.default.test'}}};
     jquery.ajax = request => {
+        if (request.type === 'GET') {
+            let done;
+            checks.push({request, answer: body => done(body)});
+            return {done: fn => { done = fn; }};
+        }
         const pending = pendingRequest(request);
         requests.push(pending);
         return pending.promise;
@@ -28,7 +34,8 @@ function fixture(b = browser({'commercekings-consent-config': {
         jquery, 'CommerceKings_Consent/js/consent/adapter!': adapter, 'mage/cookies': {}
     });
     consent.onChange('analytics', value => callbacks.push(value));
-    return {b, adapter, consent, requests, callbacks, beacons};
+    const openPreferences = () => (b.events['ck-consent:preferences'] || []).forEach(fn => fn());
+    return {b, adapter, consent, requests, callbacks, beacons, states, checks, openPreferences};
 }
 
 test('loader waits for the configuration node when RequireJS starts during HTML parsing', () => {
@@ -177,4 +184,41 @@ test('a withdrawal pending from when the purpose was recorded still reaches the 
     assert.equal(f.requests.length, 1);
     assert.ok(f.requests[0].request.url.endsWith('/withdraw'));
     assert.deepEqual(f.callbacks, [false]);
+});
+
+test('opening the preferences asks the server and switches off a yes withdrawn on another device', () => {
+    const f = fixture(undefined, {cart_reminder: true, analytics: true});
+    f.openPreferences();
+    assert.equal(f.checks.length, 1);
+    assert.equal(f.checks[0].request.url, 'https://shop.example.test/ckconsent/status');
+    assert.equal(f.checks[0].request.cache, false, 'never answered from the browser cache');
+    f.checks[0].answer({withdrawn: ['cart_reminder']});
+    assert.equal(f.states.cart_reminder, false, 'the withdrawn purpose is switched off');
+    assert.equal(f.states.analytics, true, 'other purposes stay');
+    assert.equal(f.requests.at(-1).request.url, 'https://shop.example.test/ckconsent/withdraw');
+    f.openPreferences();
+    assert.equal(f.checks.length, 2, 'every opening asks again');
+});
+
+test('nothing is asked on page load, without a choice or with nothing accepted', () => {
+    assert.equal(fixture().checks.length, 0, 'page load');
+    const none = fixture();
+    none.openPreferences();
+    assert.equal(none.checks.length, 0, 'no banner choice yet');
+    const rejected = fixture(undefined, {cart_reminder: false});
+    rejected.openPreferences();
+    assert.equal(rejected.checks.length, 0, 'nothing accepted, nothing to switch off');
+});
+
+test('an answer for a choice changed meanwhile, or of an unknown shape, changes nothing', () => {
+    const f = fixture(undefined, {cart_reminder: true, analytics: true});
+    f.openPreferences();
+    f.adapter.change('analytics', false);
+    f.checks[0].answer({withdrawn: ['cart_reminder']});
+    assert.equal(f.states.cart_reminder, true, 'the visitor chose again before the answer arrived');
+    f.openPreferences();
+    f.checks[1].answer({withdrawn: 'cart_reminder'});
+    f.openPreferences();
+    f.checks[2].answer(null);
+    assert.equal(f.states.cart_reminder, true);
 });

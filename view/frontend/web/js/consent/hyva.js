@@ -42,6 +42,27 @@
         });
     }
 
+    function get(url, done) {
+        var controller = new AbortController(),
+            timer = window.setTimeout(function () { controller.abort(); }, 10000);
+
+        window.fetch(url, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            signal: controller.signal
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error('Consent request failed.');
+            }
+            return response.json();
+        }).then(done).catch(function () {
+            // Only the banner display waits for this; the server ignores a withdrawn choice either way.
+        }).finally(function () {
+            window.clearTimeout(timer);
+        });
+    }
+
     function start() {
         var source = readConfig('commercekings-consent-config'),
             factory = source && core.adapters[source.adapter],
@@ -66,7 +87,8 @@
                 defaults: {path: source.cookiePath || '/', domain: source.cookieDomain || ''}
             },
             ready: function (callback) { callback(); },
-            post: post
+            post: post,
+            get: get
         });
         core.provider = provider;
         // The source starts its banner now, after the provider listens.

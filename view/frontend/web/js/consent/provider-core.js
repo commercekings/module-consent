@@ -1,7 +1,7 @@
 /**
  * Shared purpose API. Grants are serialized and acknowledged before features are notified.
  * Withdrawal hints survive failed requests and navigation. Entry points supply only cookies,
- * DOM readiness and the POST transport; source and permission behavior is shared across themes.
+ * DOM readiness and the POST and GET transport; source and permission behavior is shared across themes.
  */
 (function (root, factory) {
     'use strict';
@@ -22,6 +22,7 @@
             acknowledged = Object.create(null),
             queue = [],
             busy = false,
+            changes = 0,
             settings = null;
 
         function config() {
@@ -113,6 +114,7 @@
         }
 
         function sync(purpose, isOn) {
+            changes++;
             versions[purpose] = (versions[purpose] || 0) + 1;
             acknowledged[purpose] = false;
             // Also remember OFF until the server confirms it; a beacon has no acknowledgement.
@@ -151,7 +153,40 @@
             });
         }
 
+        /** Purposes of this browser's current choice withdrawn elsewhere (the email link opened on another device). */
+        function applyWithdrawn(data) {
+            var withdrawn = data && data.withdrawn;
+            if (!Array.isArray(withdrawn) || !adapter.hasChoice()) {
+                return;
+            }
+            withdrawn.forEach(function (purpose) {
+                if (typeof purpose === 'string' && adapter.hasConsent(purpose)) {
+                    adapter.revoke(purpose);
+                }
+            });
+        }
+
+        /**
+         * The visitor opened the preferences: ask whether a "yes" shown there was withdrawn elsewhere. Only with
+         * something accepted; an answer for a choice changed meanwhile is ignored.
+         */
+        function checkWithdrawn() {
+            var asked = changes;
+            if (typeof transport.get !== 'function' || !adapter.hasChoice()
+                || !(config().purposes || []).some(function (purpose) { return adapter.hasConsent(purpose); })
+            ) {
+                return;
+            }
+            transport.get(window.BASE_URL + 'ckconsent/status', function (response) {
+                if (asked === changes) {
+                    applyWithdrawn(response);
+                }
+            });
+        }
+
         (config().purposes || []).forEach(watch);
+        // Sources announce their preferences opening (e.g. Cookie settings) - one small request per opening.
+        window.addEventListener('ck-consent:preferences', checkWithdrawn);
         transport.ready(catchUp);
         window.addEventListener('online', catchUp);
         window.addEventListener('pagehide', function () {

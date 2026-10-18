@@ -49,6 +49,35 @@ class ConsentStore
     }
 
     /**
+     * Of $purposes, those whose record of this one source choice was withdrawn (e.g. by an email link opened
+     * in another browser). One lookup on the unique choice index.
+     *
+     * @param string[] $purposes
+     * @return string[]
+     */
+    public function findWithdrawnPurposes(
+        array $purposes,
+        string $browserHash,
+        int $websiteId,
+        string $source,
+        string $reference,
+        string $sourceTime
+    ): array {
+        if (!$purposes) {
+            return [];
+        }
+        $db = $this->resource->getConnection();
+        return array_values(array_map('strval', $db->fetchCol($db->select()->from($this->table(), ['purpose'])
+            ->where('purpose IN (?)', array_values($purposes))
+            ->where('browser_hash = ?', $browserHash)
+            ->where('website_id = ?', $websiteId)
+            ->where('source = ?', $source)
+            ->where('reference = ?', $reference)
+            ->where('source_time = ?', $sourceTime)
+            ->where('withdrawn_at IS NOT NULL'))));
+    }
+
+    /**
      * Records the consent unless the same choice is already recorded or was withdrawn - in ONE statement,
      * so it can't slip past a withdrawal that is being written at the same moment. $explicit = the visitor
      * just switched the purpose on: only choices up to the withdrawn time are refused. Otherwise (a choice

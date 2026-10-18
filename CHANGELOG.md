@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A consent withdrawn with the email link on another device also switches the banner off in the browser that gave
+  it: opening Cookie settings asks `GET /ckconsent/status` (one small request per opening, nothing on page loads).
+  Sources announce the opening with the window event `ck-consent:preferences`.
 - Requires Magento 2.4.4 or later (`magento/framework ^103.0.4`): Magento 2.4.0–2.4.3 do not run on PHP 8.1.
 - Consent lifetime is 1 to 730 days (24 months, the longest an EU authority accepts; admin validation and in code),
   and an expiry is capped at the last TIMESTAMP second (2038-01-19), so no consent is stored already expired.

@@ -13,6 +13,9 @@ define([
         post: function (url, data, done, always) {
             $.ajax({url: url, type: 'POST', dataType: 'json', timeout: 10000, data: data, global: false})
                 .done(done).always(always);
+        },
+        get: function (url, done) {
+            $.ajax({url: url, type: 'GET', dataType: 'json', timeout: 10000, cache: false, global: false}).done(done);
         }
     });
 });
