@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 - 2026-10-19
 
 - A purpose's `active_if` settings are read for each consent's own website (cron and queue consumers check every
   website from one store).
