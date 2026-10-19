@@ -16,6 +16,18 @@
             </argument>
         </arguments>
     </type>
+    <!-- CommandList builds every command on each bin/magento run, setup:install on an empty database too: what a command
+         needs (store config, session config) is only built when it runs -->
+    <type name="CommerceKings\Consent\Console\Command\ExportConfig">
+        <arguments>
+            <argument name="evidence" xsi:type="object">CommerceKings\Consent\Model\ConfigurationEvidence\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="CommerceKings\Consent\Console\Command\ShowEvidence">
+        <arguments>
+            <argument name="evidence" xsi:type="object">CommerceKings\Consent\Model\RecordedEvidence\Proxy</argument>
+        </arguments>
+    </type>
     <!-- purposes may be switched off by their module's settings (active_if) -->
     <type name="CommerceKings\Consent\Model\PurposePool">
         <arguments>
