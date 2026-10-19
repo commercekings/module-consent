@@ -33,7 +33,8 @@ define([], function () {
             function resolve() {
                 element = document.getElementById('commercekings-consent-config');
                 try {
-                    settings = JSON.parse(element ? element.textContent : '{}');
+                    // valid JSON that is no object ("null") is no configuration either
+                    settings = JSON.parse(element ? element.textContent : '{}') || {};
                 } catch (e) {
                     settings = {};
                 }
