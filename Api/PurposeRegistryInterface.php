@@ -31,9 +31,15 @@ namespace CommerceKings\Consent\Api;
  *
  * Raise terms_revision when what the visitor agrees to changes: every consent for that purpose given
  * under the old terms stops being valid.
+ *
+ * Both are stored with every consent: a purpose code has at most CODE_LENGTH (64) characters and a terms_revision at
+ * most TERMS_REVISION_LENGTH (32); a longer one is refused when the purposes are declared.
  */
 interface PurposeRegistryInterface
 {
+    public const CODE_LENGTH = 64;
+    public const TERMS_REVISION_LENGTH = 32;
+
     /** @return string[] the active purposes */
     public function getCodes(): array;
 

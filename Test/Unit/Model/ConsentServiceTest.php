@@ -546,4 +546,30 @@ class ConsentServiceTest extends TestCase
         $this->choose(['cart_reminder'], TestClock::at('09:00:00'), 'cid-1', $this->bannerRevision);
         $this->assertSame($this->bannerRevision, $this->service()->getCurrent('cart_reminder')->bannerRevision);
     }
+
+    public function testAChoiceReferenceLongerThanItsColumnRecordsOrWithdrawsNothingAndIsLogged(): void
+    {
+        // a third-party source's reference: stored, it would be cut to 80 characters
+        $reference = str_repeat('c', 81);
+        $errors = [];
+        $logger = $this->createStub(\Psr\Log\LoggerInterface::class);
+        $logger->method('error')->willReturnCallback(function ($message, $context = []) use (&$errors) {
+            $errors[] = [$message, $context];
+        });
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'), $reference);
+        $this->assertNull($this->service(logger: $logger)->getCurrent('cart_reminder'));
+        $this->choose(['analytics'], TestClock::at('10:00:00'), $reference);
+        $this->assertSame([], $this->service(logger: $logger)->withdrawCurrent('cart_reminder', 'banner'));
+        $this->assertSame([[], []], [$this->store->rows, $this->store->marks], 'nothing stored with a cut reference');
+        $this->assertCount(2, $errors);
+        $this->assertSame('CommerceKings_Consent: the source\'s choice reference is longer than 80 characters; it is'
+            . ' not recorded', $errors[0][0]);
+        $this->assertSame(['website_id' => 1, 'length' => 81], $errors[0][1]);
+    }
+
+    public function testAChoiceReferenceOf80CharactersIsRecorded(): void
+    {
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'), str_repeat('c', 80));
+        $this->assertSame(str_repeat('c', 80), $this->service()->getCurrent('cart_reminder')->reference);
+    }
 }

@@ -66,4 +66,20 @@ class PurposePoolTest extends TestCase
         $pool = new PurposePool(['marketing' => ['active_if' => ['x' => 'some/flag']]]);
         $this->assertTrue($pool->isDeclared('marketing'));
     }
+
+    /** The purpose code and terms revision are stored with every consent: longer ones are refused when declared. */
+    public function testAPurposeCodeOrTermsRevisionLongerThanItsColumnIsRefusedWhenDeclared(): void
+    {
+        foreach ([[str_repeat('p', 65) => ['label' => 'Too long']],
+            ['cart_reminder' => ['label' => 'Reminder', 'terms_revision' => str_repeat('t', 33)]]] as $purposes) {
+            try {
+                new PurposePool($purposes);
+                $this->fail('Expected the declaration to be refused: ' . json_encode(array_keys($purposes)));
+            } catch (\InvalidArgumentException $error) {
+                $this->assertStringContainsString('Consent purpose', $error->getMessage());
+            }
+        }
+        $pool = new PurposePool([str_repeat('p', 64) => ['terms_revision' => str_repeat('t', 32)]]);
+        $this->assertSame(str_repeat('t', 32), $pool->getTermsRevision(str_repeat('p', 64)), 'the limits themselves');
+    }
 }

@@ -8,6 +8,7 @@ use CommerceKings\Consent\Api\BrowserIdentityInterface;
 use CommerceKings\Consent\Api\ConsentGuardInterface;
 use CommerceKings\Consent\Api\ConsentInterface;
 use CommerceKings\Consent\Api\Data\Consent;
+use CommerceKings\Consent\Api\Data\SourceChoice;
 use CommerceKings\Consent\Api\Data\WithdrawalContext;
 use CommerceKings\Consent\Api\SourceInterface;
 use Magento\Framework\Event\ManagerInterface;
@@ -85,6 +86,7 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         }
         $choice = $source->getChoice();
         if (!$choice || !$choice->accepts($purpose) || $choice->reference === '' || $choice->givenAt === ''
+            || $this->isTooLong($choice, $websiteId)
             || $choice->revision !== $revision
             || (int)strtotime($choice->givenAt . ' UTC') > time() + self::FUTURE_TOLERANCE
         ) {
@@ -163,11 +165,24 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         $websiteId = $this->websiteId();
         $source = $this->source->get($websiteId);
         $choice = $source?->getChoice();
-        if (!$source || !$choice || $choice->accepts($purpose) || $choice->reference === '' || $choice->givenAt === '') {
+        if (!$source || !$choice || $choice->accepts($purpose) || $choice->reference === '' || $choice->givenAt === ''
+            || $this->isTooLong($choice, $websiteId)) {
             return [];
         }
         // the "no" itself: anything of this series saved before it (a request still on its way) is refused
         return $this->withdrawAll($purpose, $browserHash, $websiteId, [[$source->getCode(), $choice->reference, $choice->givenAt]], $via);
+    }
+
+    /** A third-party source's reference that the database would cut: logged, and neither recorded nor withdrawn. */
+    private function isTooLong(SourceChoice $choice, int $websiteId): bool
+    {
+        if (mb_strlen($choice->reference) <= SourceChoice::REFERENCE_LENGTH) {
+            return false;
+        }
+        $this->logger->error(sprintf('CommerceKings_Consent: the source\'s choice reference is longer than %d'
+            . ' characters; it is not recorded', SourceChoice::REFERENCE_LENGTH),
+            ['website_id' => $websiteId, 'length' => mb_strlen($choice->reference)]);
+        return true;
     }
 
     public function validCondition(string $consentIdColumn): string

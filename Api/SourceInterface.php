@@ -15,7 +15,12 @@ use CommerceKings\Consent\Api\Data\SourceChoice;
  */
 interface SourceInterface
 {
-    /** Short code stored with every consent, e.g. "vanilla-cookieconsent". */
+    public const CODE_LENGTH = 32;
+
+    /**
+     * Short code stored with every consent, e.g. "vanilla-cookieconsent": at most CODE_LENGTH (32) characters, the
+     * same as the source's key in SourcePool - a longer one is refused when the source is registered.
+     */
     public function getCode(): string;
 
     /** The version of the library behind the source, e.g. "3.1.0" (newest cookie format it reads). */

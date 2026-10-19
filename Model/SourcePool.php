@@ -22,6 +22,15 @@ class SourcePool
     public function __construct(
         private readonly array $sources = []
     ) {
+        // the code is stored with every consent and withdrawal mark: Magento's database session would cut it silently
+        foreach ($sources as $code => $source) {
+            $provider = $source['provider'] ?? null;
+            if (mb_strlen((string)$code) > SourceInterface::CODE_LENGTH || ($provider instanceof SourceInterface
+                && mb_strlen($provider->getCode()) > SourceInterface::CODE_LENGTH)) {
+                throw new \InvalidArgumentException(sprintf('Consent source "%s": the code may have at most %d'
+                    . ' characters.', $code, SourceInterface::CODE_LENGTH));
+            }
+        }
     }
 
     /** code => label */

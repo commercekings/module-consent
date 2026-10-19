@@ -19,7 +19,7 @@ class ConsentStore
     public const MARKS = 'ck_consent_withdrawal';
     public const SNAPSHOTS = 'ck_consent_snapshot';
     /** Characters of the stored banner revision; Magento's database session would cut a longer one silently. */
-    public const REVISION_LENGTH = 32;
+    public const REVISION_LENGTH = \CommerceKings\Consent\Api\SourceConfigInterface::REVISION_LENGTH;
 
     private const COLUMNS = [
         'consent_id', 'purpose', 'browser_hash', 'website_id', 'source', 'reference', 'source_time',

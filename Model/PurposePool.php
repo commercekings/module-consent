@@ -22,6 +22,15 @@ class PurposePool implements PurposeRegistryInterface
         private readonly array $purposes = [],
         private readonly ?ScopeConfigInterface $scopeConfig = null
     ) {
+        // stored with every consent: Magento's database session would cut a longer value silently
+        foreach ($purposes as $code => $purpose) {
+            if (mb_strlen((string)$code) > self::CODE_LENGTH
+                || mb_strlen((string)($purpose['terms_revision'] ?? '')) > self::TERMS_REVISION_LENGTH) {
+                throw new \InvalidArgumentException(sprintf('Consent purpose "%s": the code may have at most %d'
+                    . ' characters, terms_revision at most %d.', $code, self::CODE_LENGTH,
+                    self::TERMS_REVISION_LENGTH));
+            }
+        }
     }
 
     /** Active purposes. */

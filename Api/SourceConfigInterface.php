@@ -10,6 +10,8 @@ namespace CommerceKings\Consent\Api;
  */
 interface SourceConfigInterface
 {
+    public const REVISION_LENGTH = 32;
+
     /** Code of the source chosen for the website (null = current website). */
     public function getSourceCode(?int $websiteId = null): string;
 
@@ -17,8 +19,8 @@ interface SourceConfigInterface
     public function getCookieName(?int $websiteId = null): string;
 
     /**
-     * The revision a choice must have been made for; raising it asks every visitor again. At most 32 characters
-     * (it is stored with each consent): with a longer one no consent is recorded.
+     * The revision a choice must have been made for; raising it asks every visitor again. At most REVISION_LENGTH
+     * (32) characters (it is stored with each consent): with a longer one no consent is recorded.
      */
     public function getRevision(?int $websiteId = null): string;
 

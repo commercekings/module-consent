@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace CommerceKings\Consent\Model\CookieFormat;
 
 use CommerceKings\Consent\Api\CookieFormatInterface;
+use CommerceKings\Consent\Api\Data\SourceChoice;
 
 /**
  * Default cookie reader: a banner's cookie as a decoded array, read by paths (dots for nesting). A reader
@@ -70,7 +71,7 @@ abstract class AbstractCookieFormat implements CookieFormatInterface
     {
         $value = $this->value($cookie, static::REFERENCE);
         return is_string($value) || is_int($value)
-            ? substr((string)preg_replace('/[^a-z0-9-]/i', '', (string)$value), 0, 80) : '';
+            ? substr((string)preg_replace('/[^a-z0-9-]/i', '', (string)$value), 0, SourceChoice::REFERENCE_LENGTH) : '';
     }
 
     public function revision(array $cookie): string

@@ -82,4 +82,22 @@ class SourcePoolTest extends TestCase
         $this->assertSame('3', $purposes->getTermsRevision('cart_reminder'));
         $this->assertSame('1', $purposes->getTermsRevision('newsletter'), 'default terms revision');
     }
+
+    /** The source code is stored with every consent and withdrawal mark: a longer one is refused when registered. */
+    public function testASourceCodeLongerThanItsColumnIsRefusedWhenRegistered(): void
+    {
+        foreach ([[str_repeat('s', 33), 'short'], ['short', str_repeat('s', 33)]] as [$key, $code]) {
+            try {
+                new SourcePool([$key => ['label' => 'Banner', 'provider' => $this->source($code),
+                    'adapter' => 'A_B/js/a']]);
+                $this->fail('Expected the registration to be refused: ' . $key . ' / ' . $code);
+            } catch (\InvalidArgumentException $error) {
+                $this->assertStringContainsString('Consent source', $error->getMessage());
+            }
+        }
+        $code = str_repeat('s', 32);
+        $pool = new SourcePool([$code => ['label' => 'Banner', 'provider' => $this->source($code),
+            'adapter' => 'A_B/js/a']]);
+        $this->assertSame($code, $pool->getProvider($code)->getCode());
+    }
 }
