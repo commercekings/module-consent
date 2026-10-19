@@ -16,7 +16,10 @@ interface SourceConfigInterface
     /** The cookie the source keeps the visitor's choice in; changing it asks every visitor again. */
     public function getCookieName(?int $websiteId = null): string;
 
-    /** The revision a choice must have been made for; raising it asks every visitor again. */
+    /**
+     * The revision a choice must have been made for; raising it asks every visitor again. At most 32 characters
+     * (it is stored with each consent): with a longer one no consent is recorded.
+     */
     public function getRevision(?int $websiteId = null): string;
 
     /** Maximum consent lifetime from the saved choice time; a source may specify an earlier expiry. */

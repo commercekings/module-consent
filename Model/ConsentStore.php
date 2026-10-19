@@ -18,6 +18,8 @@ class ConsentStore
     public const TABLE = 'ck_consent';
     public const MARKS = 'ck_consent_withdrawal';
     public const SNAPSHOTS = 'ck_consent_snapshot';
+    /** Characters of the stored banner revision; Magento's database session would cut a longer one silently. */
+    public const REVISION_LENGTH = 32;
 
     private const COLUMNS = [
         'consent_id', 'purpose', 'browser_hash', 'website_id', 'source', 'reference', 'source_time',
@@ -87,6 +89,7 @@ class ConsentStore
      */
     public function record(array $data, bool $explicit = false): void
     {
+        $this->assertRevision((string)($data['banner_revision'] ?? ''));
         $db = $this->resource->getConnection();
         $values = array_map(fn ($column) => $data[$column] ?? null, self::COLUMNS);
         $sql = sprintf(
@@ -220,6 +223,7 @@ class ConsentStore
     /** Saves a wording snapshot once (the hash is its identity). */
     public function saveSnapshot(string $hash, int $websiteId, int $storeId, string $revision, string $content): void
     {
+        $this->assertRevision($revision);
         $db = $this->resource->getConnection();
         $db->query(
             sprintf(
@@ -228,6 +232,15 @@ class ConsentStore
             ),
             [$hash, $websiteId, $storeId, $revision, $content]
         );
+    }
+
+    /** Evidence is never kept with a cut revision. */
+    private function assertRevision(string $revision): void
+    {
+        if (mb_strlen($revision) > self::REVISION_LENGTH) {
+            throw new \InvalidArgumentException(sprintf('The banner_revision is longer than %d characters.',
+                self::REVISION_LENGTH));
+        }
     }
 
     public function loadSnapshot(string $hash): ?array

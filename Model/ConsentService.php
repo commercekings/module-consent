@@ -75,9 +75,17 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         ) {
             return null;
         }
+        $revision = $this->config->getRevision($websiteId);
+        if (mb_strlen($revision) > ConsentStore::REVISION_LENGTH) {
+            // a replaced source configuration: stored, the revision would be cut - record nothing
+            $this->logger->error(sprintf('CommerceKings_Consent: the source revision is longer than %d characters; no'
+                . ' consent is recorded', ConsentStore::REVISION_LENGTH),
+                ['website_id' => $websiteId, 'length' => mb_strlen($revision)]);
+            return null;
+        }
         $choice = $source->getChoice();
         if (!$choice || !$choice->accepts($purpose) || $choice->reference === '' || $choice->givenAt === ''
-            || $choice->revision !== $this->config->getRevision($websiteId)
+            || $choice->revision !== $revision
             || (int)strtotime($choice->givenAt . ' UTC') > time() + self::FUTURE_TOLERANCE
         ) {
             return null;

@@ -54,7 +54,8 @@ class ConsentServiceTest extends TestCase
         $this->store->db->method('getTransactionLevel')->willReturn(0);
     }
 
-    private function service(?LockManagerInterface $locks = null, ?WithdrawalCleanupStore $tasks = null): ConsentService
+    private function service(?LockManagerInterface $locks = null, ?WithdrawalCleanupStore $tasks = null,
+        ?\Psr\Log\LoggerInterface $logger = null): ConsentService
     {
         $source = $this->createStub(SourceInterface::class);
         $source->method('getCode')->willReturn('banner');
@@ -97,7 +98,8 @@ class ConsentServiceTest extends TestCase
             $tasks->method('schedule')->willReturn([]);
         }
         return new ConsentService($this->store, $configured, $purposes, $browser, $config, $stores, $events, $wording,
-            new Random(), new WithdrawalPool(), $tasks, $this->createStub(WithdrawalCleanup::class), $locks, new NullLogger());
+            new Random(), new WithdrawalPool(), $tasks, $this->createStub(WithdrawalCleanup::class), $locks,
+            $logger ?? new NullLogger());
     }
 
     private function choose(array $purposes, string $time, string $reference = 'cid-1', string $revision = '1'): void
@@ -518,5 +520,30 @@ class ConsentServiceTest extends TestCase
         $this->assertTrue($this->service()->isValid($consent->consentId));
         $this->unrecorded = ['analytics'];
         $this->assertFalse($this->service()->isValid($consent->consentId), 'the same answer as getCurrent() and the guard');
+    }
+
+    public function testARevisionLongerThanItsColumnRecordsNoConsentAndIsLogged(): void
+    {
+        // a replaced SourceConfigInterface with a long revision (e.g. a hash): stored, it would be cut to 32 characters
+        $this->bannerRevision = str_repeat('r', 33);
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'), 'cid-1', $this->bannerRevision);
+        $errors = [];
+        $logger = $this->createStub(\Psr\Log\LoggerInterface::class);
+        $logger->method('error')->willReturnCallback(function ($message, $context = []) use (&$errors) {
+            $errors[] = [$message, $context];
+        });
+        $this->assertNull($this->service(logger: $logger)->getCurrent('cart_reminder'));
+        $this->assertNull($this->service(logger: $logger)->grantCurrent('cart_reminder'));
+        $this->assertSame([], $this->store->rows, 'nothing recorded with a cut revision');
+        $this->assertSame('CommerceKings_Consent: the source revision is longer than 32 characters; no consent is'
+            . ' recorded', $errors[0][0]);
+        $this->assertSame(['website_id' => 1, 'length' => 33], $errors[0][1]);
+    }
+
+    public function testARevisionOfExactly32CharactersIsRecorded(): void
+    {
+        $this->bannerRevision = str_repeat('r', 32);
+        $this->choose(['cart_reminder'], TestClock::at('09:00:00'), 'cid-1', $this->bannerRevision);
+        $this->assertSame($this->bannerRevision, $this->service()->getCurrent('cart_reminder')->bannerRevision);
     }
 }
