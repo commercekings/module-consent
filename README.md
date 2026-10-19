@@ -104,6 +104,13 @@ Categories and purposes are defined in code and shown read-only. Flush the full 
   until then it can sign withdrawal links too (they can only withdraw a consent, never grant one, and need the
   consent's random ID).
 
+## Tested (as of 0.1.0)
+
+- **Automated tests:** 226 unit, 28 integration and 25 JavaScript tests (unit and JavaScript tests run on every push).
+- **Line coverage:** 87.1% with unit and integration tests combined.
+- **End to end on Magento 2.4.9:** in Chrome, a guest's banner choices are recorded as consents and carried over when they sign in.
+- **Install:** a fresh install of every CommerceKings package from GitHub on an empty Magento database, verified.
+
 ## More
 
 [How it works](docs/how-it-works.md) · [For features](docs/for-features.md) · [Adding a source](docs/sources.md) ·
@@ -115,13 +122,6 @@ These modules help you ask for, record and respect your shoppers' choices – th
 their own. You are responsible for your store's privacy: what you collect, the wording you show, your privacy policy
 and whether your setup meets the laws that apply to you (e.g. GDPR, ePrivacy, email marketing rules). Get legal advice
 if you are unsure.
-
-## Tested (as of 0.1.0)
-
-- **Automated tests:** 226 unit, 28 integration and 25 JavaScript tests (unit and JavaScript tests run on every push).
-- **Line coverage:** 87.1% with unit and integration tests combined.
-- **End to end on Magento 2.4.9:** in Chrome, a guest's banner choices are recorded as consents and carried over when they sign in.
-- **Install:** a fresh install of every CommerceKings package from GitHub on an empty Magento database, verified.
 
 ---
 
