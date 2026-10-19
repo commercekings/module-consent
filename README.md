@@ -116,6 +116,13 @@ their own. You are responsible for your store's privacy: what you collect, the w
 and whether your setup meets the laws that apply to you (e.g. GDPR, ePrivacy, email marketing rules). Get legal advice
 if you are unsure.
 
+## Tested (as of 0.1.0)
+
+- **Automated tests:** 226 unit, 28 integration and 25 JavaScript tests (unit and JavaScript tests run on every push).
+- **Line coverage:** 87.1% with unit and integration tests combined.
+- **End to end on Magento 2.4.9:** in Chrome, a guest's banner choices are recorded as consents and carried over when they sign in.
+- **Install:** a fresh install of every CommerceKings package from GitHub on an empty Magento database, verified.
+
 ---
 
 **Need it installed, set up or customized?** **[Get in touch →](https://commercekings.net)**
