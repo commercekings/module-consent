@@ -25,7 +25,8 @@ class ConsentStore
     ];
 
     public function __construct(
-        private readonly ResourceConnection $resource
+        private readonly ResourceConnection $resource,
+        private readonly int $cleanupBatch = 1000
     ) {
     }
 
@@ -146,28 +147,74 @@ class ConsentStore
         );
     }
 
-    /** Deletes expired / withdrawn evidence after $days and marks after the separate safety minimum. */
+    /**
+     * Deletes expired / withdrawn evidence after $days and marks after the separate safety minimum. In batches of
+     * $cleanupBatch rows by primary key, so no statement holds locks on a large range; every DELETE repeats its
+     * condition, so a row that changed since it was selected (a renewed withdrawal mark) stays. The cutoffs are taken
+     * once, so the result is the same as one statement per table.
+     */
     public function cleanUp(int $days, ?int $withdrawalDays = null): int
     {
         $db = $this->resource->getConnection();
-        $deleted = $db->delete(
-            $this->table(),
-            sprintf('withdrawn_at < NOW() - INTERVAL %1$d DAY OR expires_at < NOW() - INTERVAL %1$d DAY', $days)
-        );
+        $evidenceCutoff = (string)$db->fetchOne('SELECT NOW() - INTERVAL ? DAY', [$days]);
+        $marksCutoff = (string)$db->fetchOne('SELECT NOW() - INTERVAL ? DAY', [max($days, $withdrawalDays ?? $days)]);
+        $consents = $this->table();
+        $snapshots = $this->resource->getTableName(self::SNAPSHOTS);
+        $marks = $this->resource->getTableName(self::MARKS);
+        $deleted = 0;
+        // one pass per indexed column instead of an OR over both
+        foreach (['withdrawn_at', 'expires_at'] as $column) {
+            $condition = $db->quoteInto($column . ' < ?', $evidenceCutoff);
+            $deleted += $this->deleteInBatches(
+                fn () => $db->fetchCol($db->select()->from($consents, 'consent_id')->where($condition)
+                    ->limit($this->cleanupBatch)),
+                fn (array $ids) => $db->delete($consents, ['consent_id IN (?)' => $ids, $condition])
+            );
+        }
         // wording no consent refers to any more
-        $snapshots = $db->query(
-            sprintf(
-                'DELETE s FROM %s s WHERE s.created_at < NOW() - INTERVAL %d DAY'
-                . ' AND NOT EXISTS (SELECT 1 FROM %s c WHERE c.snapshot_hash = s.snapshot_hash)',
-                $db->quoteIdentifier($this->resource->getTableName(self::SNAPSHOTS)),
-                $days,
-                $db->quoteIdentifier($this->table())
-            )
-        )->rowCount();
-        return $deleted + $snapshots + $db->delete(
-            $this->resource->getTableName(self::MARKS),
-            ['updated_at < NOW() - INTERVAL ? DAY' => max($days, $withdrawalDays ?? $days)]
+        $unused = sprintf('NOT EXISTS (SELECT 1 FROM %s c WHERE c.snapshot_hash = %s.snapshot_hash)',
+            $db->quoteIdentifier($consents), $db->quoteIdentifier($snapshots));
+        $old = $db->quoteInto('created_at < ?', $evidenceCutoff);
+        $deleted += $this->deleteInBatches(
+            fn () => $db->fetchCol($db->select()->from($snapshots, 'snapshot_hash')->where($old)->where($unused)
+                ->limit($this->cleanupBatch)),
+            fn (array $hashes) => $db->delete($snapshots, ['snapshot_hash IN (?)' => $hashes, $old, $unused])
         );
+        $stale = $db->quoteInto('updated_at < ?', $marksCutoff);
+        $key = ['purpose', 'browser_hash', 'website_id', 'source', 'reference'];
+        return $deleted + $this->deleteInBatches(
+            fn () => $db->fetchAll($db->select()->from($marks, $key)->where($stale)
+                ->limit($this->cleanupBatch)),
+            fn (array $rows) => $db->delete($marks, [$this->keysCondition($key, $rows), $stale])
+        );
+    }
+
+    /**
+     * Selects a batch, deletes it, and repeats until a batch comes back short. Stops when a batch deletes nothing,
+     * so rows the DELETE's own condition keeps cannot loop forever.
+     */
+    private function deleteInBatches(callable $select, callable $delete): int
+    {
+        $total = 0;
+        do {
+            $batch = $select();
+            if (!$batch) {
+                break;
+            }
+            $deleted = (int)$delete($batch);
+            $total += $deleted;
+        } while ($deleted > 0 && count($batch) >= $this->cleanupBatch);
+        return $total;
+    }
+
+    /** "(a = ? AND b = ? …) OR …" for the composite keys of $rows. */
+    private function keysCondition(array $columns, array $rows): string
+    {
+        $db = $this->resource->getConnection();
+        return '(' . implode(' OR ', array_map(fn (array $row) => '(' . implode(' AND ', array_map(
+            fn (string $column) => $db->quoteInto($db->quoteIdentifier($column) . ' = ?', $row[$column]),
+            $columns
+        )) . ')', $rows)) . ')';
     }
 
     /** Saves a wording snapshot once (the hash is its identity). */

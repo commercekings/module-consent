@@ -62,7 +62,10 @@ class WithdrawalCleanupStore
         $this->resource->getConnection()->delete($this->resource->getTableName(self::TABLE), ['task_id = ?' => $id]);
     }
 
-    /** Back off from one minute to one hour; unfinished cleanup is never silently discarded. */
+    /**
+     * Back off from one minute to one hour. The task stays until it succeeds or WithdrawalCleanup gives it up after
+     * MAX_ATTEMPTS (logged as an error); it is never dropped without a log entry.
+     */
     public function retry(int $id, int $attempts): void
     {
         $delay = min(3600, 60 * (2 ** min($attempts, 6)));
