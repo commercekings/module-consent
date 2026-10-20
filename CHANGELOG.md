@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.1 - unreleased
+## 0.1.1 - 2026-10-20
 
 - A purpose's `active_if` setting is read for one explicit target: a visitor's grant or withdrawal uses the current
   store view (the banner they see); validity and the guard of cron jobs and queue consumers use the consent's website,
