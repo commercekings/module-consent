@@ -37,13 +37,12 @@ class Config implements SourceConfigInterface, BannerSettingsInterface
         return in_array($purpose, $ticked, true);
     }
 
-    /** @return string[] declared purposes that are recorded */
+    /** @return string[] declared purposes that are recorded (of the website, else the current store view) */
     public function getRecordedPurposes(?int $websiteId = null): array
     {
-        return array_values(array_filter(
-            $this->purposes->getCodes(),
-            fn (string $purpose) => $this->isRecorded($purpose, $websiteId)
-        ));
+        $codes = $websiteId === null ? $this->purposes->getCodes()
+            : $this->purposes->inContext($websiteId, null, fn () => $this->purposes->getCodes());
+        return array_values(array_filter($codes, fn (string $purpose) => $this->isRecorded($purpose, $websiteId)));
     }
 
     public function getPrivacyUrl(): string

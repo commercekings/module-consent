@@ -70,7 +70,8 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
         }
         $websiteId = $this->websiteId();
         $source = $this->source->get($websiteId);
-        if (!$source || !in_array($purpose, $this->mappedPurposes($source, $websiteId), true)
+        // the current store view, whose banner the visitor uses: a purpose on in this store view only is granted here
+        if (!$source || !in_array($purpose, $this->mappedPurposes($source), true)
             // an optional purpose the shop does not record: the source's cookie alone decides, nothing is stored
             || !$this->config->isRecorded($purpose, $websiteId)
         ) {
@@ -322,11 +323,19 @@ class ConsentService implements ConsentInterface, ConsentGuardInterface
             && in_array($purpose, $this->mappedPurposes($source, $websiteId), true);
     }
 
-    /** @return string[] Declared purposes granted by at least one current source category. */
-    private function mappedPurposes(SourceInterface $source, int $websiteId): array
+    /**
+     * Declared purposes granted by at least one current source category, for a target: the current store view
+     * (null: a visitor's grant, the banner they see), or a website - on in any of its store views (validity,
+     * guards) - with the source's categories built for that website, whatever store view this runs in.
+     *
+     * @return string[]
+     */
+    private function mappedPurposes(SourceInterface $source, ?int $websiteId = null): array
     {
         $mapped = [];
-        foreach ($source->getCategories() as $category) {
+        $categories = $websiteId === null ? $source->getCategories()
+            : $this->purposes->inContext($websiteId, null, fn () => $source->getCategories());
+        foreach ($categories as $category) {
             foreach ($category['purposes'] as $purpose) {
                 if ($this->purposes->isDeclared($purpose, $websiteId)) {
                     $mapped[$purpose] = $purpose;

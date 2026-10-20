@@ -28,10 +28,12 @@
             <argument name="evidence" xsi:type="object">CommerceKings\Consent\Model\RecordedEvidence\Proxy</argument>
         </arguments>
     </type>
-    <!-- purposes may be switched off by their module's settings (active_if) -->
+    <!-- purposes may be switched off by their module's settings (active_if), per store view; a website counts
+         when any of its store views has one on. Both arguments are optional in PHP: Magento would pass null -->
     <type name="CommerceKings\Consent\Model\PurposePool">
         <arguments>
             <argument name="scopeConfig" xsi:type="object">Magento\Framework\App\Config\ScopeConfigInterface</argument>
+            <argument name="storeManager" xsi:type="object">Magento\Store\Model\StoreManagerInterface</argument>
         </arguments>
     </type>
     <!-- sources register through Model\SourcePool "sources", purposes through Model\PurposePool "purposes" (other modules' di.xml) -->

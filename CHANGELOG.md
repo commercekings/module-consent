@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.1 - unreleased
+
+- A purpose's `active_if` setting is read for one explicit target: a visitor's grant or withdrawal uses the current
+  store view (the banner they see); validity and the guard of cron jobs and queue consumers use the consent's website,
+  where the purpose counts when it is on in ANY of the website's store views. Two cases this fixes:
+  - Google Analytics (or another `active_if` integration) enabled in one store view only, off at website/default:
+    the grant was refused (the website's own scope was off), so analytics never loaded there and the banner asked
+    again on every page. Now the grant is recorded and stays valid.
+  - A purpose on for one website only (e.g. the consent bridge for abandoned carts on website 2), with the cron or
+    consumer running in another website's store view: the source's categories were built for the worker's store
+    view, the purpose dropped out and that website got no reminders. Now the categories are built for each
+    website being checked.
+- `PurposeRegistryInterface::isDeclared()` takes an optional `$storeId` (additive: existing calls keep working; a
+  class implementing the interface must add the parameter). `PurposePool::inContext()` runs code for one website or
+  store view (getCodes(), CategoryMapper and the source's categories follow it). `PurposePool` gets the store manager
+  (etc/di.xml) to see a website's store views.
+- `Config::getRecordedPurposes($websiteId)` lists that website's purposes (it used the current store view's).
+
 ## 0.1.0 - 2026-10-19
 
 - A purpose's `active_if` settings are read for each consent's own website (cron and queue consumers check every

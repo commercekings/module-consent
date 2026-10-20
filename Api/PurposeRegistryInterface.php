@@ -26,8 +26,10 @@ namespace CommerceKings\Consent\Api;
  *
  * active_if (optional): config flags (store view scope) - the purpose counts only while at least one
  * is on, e.g. analytics while Magento's GA or Consent Mode is enabled. Off, it is treated as not
- * declared: its banner category is hidden and it never has consent. Only for purposes the browser
- * uses - a cron or queue checks consents without a store view.
+ * declared: its banner category is hidden and it never has consent. Where it counts: in a store view,
+ * that store view's settings (the banner a visitor sees); for a website, on in ANY of its store views
+ * (a consent given in one store view stays valid wherever its website's consents are checked, e.g. by a
+ * cron or queue consumer running in another store view).
  *
  * Raise terms_revision when what the visitor agrees to changes: every consent for that purpose given
  * under the old terms stops being valid.
@@ -44,10 +46,17 @@ interface PurposeRegistryInterface
     public function getCodes(): array;
 
     /**
-     * @param int|null $websiteId whose settings decide "active_if" (null: the current store) – cron and queue
-     *     consumers check consents of every website from one store
+     * Whether the purpose is declared and active (active_if) for a target:
+     * - $storeId: that store view's settings (where a visitor grants or withdraws);
+     * - $websiteId alone: active in any of the website's store views (validity, guards - cron and queue
+     *   consumers check consents of every website from one store view);
+     * - neither: the current store view (or, while consents of one website or store view are being checked,
+     *   that target - e.g. a source's categories built for it).
+     *
+     * @param int|null $websiteId the website (null: see above)
+     * @param int|null $storeId the store view (since 0.1.1; null: see above)
      */
-    public function isDeclared(string $purpose, ?int $websiteId = null): bool;
+    public function isDeclared(string $purpose, ?int $websiteId = null, ?int $storeId = null): bool;
 
     public function getLabel(string $purpose): string;
 
